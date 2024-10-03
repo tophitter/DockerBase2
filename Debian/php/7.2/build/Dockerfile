@@ -60,6 +60,11 @@ RUN apt-get install -qy --no-install-recommends \
 #global install of composer if you use php <= 7.2 then use composer version 2.2 else use latest 
 COPY --from=composer:2.2 /usr/bin/composer /usr/bin/composer
 
+# Install NVM
+SHELL ["/bin/bash", "--login", "-c"]
+RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.39.7/install.sh | bash
+RUN nvm install node
+
 # Clearn up packages and cache
 RUN apt -y autoremove \
     && apt clean \
