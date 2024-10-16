@@ -7,6 +7,7 @@ pipelines:
                 name: "Build & Deploy Docker images"
                 image: ubuntu:22.04
                 script:
+                    - chmod +x builds/*.sh
                     - sh builds/run.sh ansible
                     - sh builds/run.sh deploy
                     - sh builds/run.sh php
