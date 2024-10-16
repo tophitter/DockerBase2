@@ -1,0 +1,12 @@
+image: dvmgremp/ansible-build:bookworm
+
+pipelines:
+    custom:
+        build_deploy_docker:
+            - step:
+                name: "Build & Deploy Docker images"
+                image: ubuntu:22.04
+                script:
+                    - sh ~/builds/run.sh ansible
+                    - sh ~/builds/run.sh deploy
+                    - sh ~/builds/run.sh php
