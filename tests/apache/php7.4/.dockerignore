@@ -1,0 +1,14 @@
+.idea/
+/vendor
+/composer.lock
+/node_modules
+/package-lock.json
+/.env
+/.env.local
+/.env.production
+/.env.staging
+/.env.bak
+/.env.old
+Dockerfile
+docker-compose.yml
+staging-docker-compose.yml

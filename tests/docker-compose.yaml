@@ -1,0 +1,45 @@
+version: "3.7"
+services:
+  php7.2:
+    build:
+      context: ./apache/php7.2
+    container_name: base_test_php7.2
+    restart: on-failure
+    command: >
+      bash -c "chown -R docker:staff /var/www/html/ && /entrypoint.sh"
+    volumes:
+      - './apache/php7.2/:/var/www/html'
+    networks:
+      - default
+    ports:
+      - 880:80
+      - 8440:443
+  php7.4:
+    build:
+      context: ./apache/php7.4
+    container_name: base_test_php7.4
+    restart: on-failure
+    command: >
+      bash -c "chown -R docker:staff /var/www/html/ && /entrypoint.sh"
+    volumes:
+      - './apache/php7.4/:/var/www/html'
+    networks:
+      - default
+    ports:
+      - 881:80
+      - 8441:443
+  php8.3:
+    build:
+      context: ./apache/php8.3
+    container_name: base_test_php8.3
+    restart: on-failure
+    command: >
+      bash -c "chown -R docker:staff /var/www/html/ && /entrypoint.sh"
+    volumes:
+      - './apache/php8.3/:/var/www/html'
+    networks:
+      - default
+    ports:
+      - 882:80
+      - 8442:443
+ 

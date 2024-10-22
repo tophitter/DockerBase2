@@ -5,6 +5,13 @@
 
 .env
 
+## tests
+/tests/apache/php*/.phpunit.cache
+/tests/apache/php*/node_modules
+/tests/apache/php*/logs
+/tests/apache/php*/vendor
+/tests/apache/php*/composer.lock
+
 # Node artifact files
 node_modules/
 dist/
