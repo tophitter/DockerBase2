@@ -1,4 +1,7 @@
 #!/bin/bash
+#
+#
+# exmaple useage to build the php 7.2 apache images  ./run.sh php apache 7.2 
 
 set -a
 
@@ -81,7 +84,7 @@ else
 fi
 
 echo ">>> Running build script '${BUILD_SCRIPT}.sh'";
-${SCRIPTPATH}/${BUILD_SCRIPT}.sh
+${SCRIPTPATH}/${BUILD_SCRIPT}.sh "$@"
 ret_code=$?
 
 if [ "$DEV_MODE" = false ]; then
