@@ -2,6 +2,11 @@ FROM debian:bookworm
 
 LABEL maintainer="Jason Townsend"
 
+ARG WWWGROUP
+
+#Define versions
+ARG MYSQL_PKG_VERSION=0.8.29-1
+
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN true
 ENV TZ=Europe/London
@@ -28,7 +33,32 @@ RUN apt-get install -qy --no-install-recommends \
     git \
     unzip \
     curl \
-    openssh-client
+    cron \
+    openssh-client \
+    apt-utils
+
+# Install MySQL Client
+RUN wget https://dev.mysql.com/get/mysql-apt-config_${MYSQL_PKG_VERSION}_all.deb
+RUN dpkg -i mysql-apt-config_${MYSQL_PKG_VERSION}_all.deb
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys B7B3B788A8D3785C 
+RUN apt update
+RUN apt install -y mysql-client
+
+# Install supervisor
+RUN apt-get install -yqy --no-install-recommends \
+    supervisor 
+
+# Install apache
+RUN apt-get install -qy --no-install-recommends \
+    apache2 \
+    apache2-bin
+
+#set correct user for apache
+RUN echo export APACHE_RUN_USER=docker >> /etc/apache2/envvars
+RUN echo export APACHE_RUN_GROUP=staff >> /etc/apache2/envvars
+
+#disable appache auto boot as it be controlled by supervisord
+RUN update-rc.d apache2 disable
 
 #Install PHP 8.3 packages
 RUN apt-get install -qy --no-install-recommends \
@@ -53,12 +83,20 @@ RUN apt-get install -qy --no-install-recommends \
     php8.3-pdo \
     php8.3-dom \
     php8.3-mongodb \
-    php8.3-dev
+    php8.3-dev \
+    php8.3-fpm \
+    libapache2-mod-php8.3
  
-############## DEPENDENCIES via COMPOSER ###################
+# Clearn up packages and cache
+RUN apt -y autoremove \
+    && apt clean \
+    && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
+RUN update-rc.d php8.3-fpm disable
+
+# Install composer
 #global install of composer if you use php <= 7.2 then use composer version 2.2 else use latest 
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.2 /usr/bin/composer /usr/bin/composer
 
 # Clearn up packages and cache
 RUN apt -y autoremove \
@@ -67,3 +105,59 @@ RUN apt -y autoremove \
 
 #add docker user
 RUN useradd -m --uid 1000 --gid 50 docker
+
+# copy PHP FPM Configs
+COPY files/php/php-fpm.conf /etc/php/8.3/fpm/php-fpm.conf
+COPY files/php/pool.d/www.conf /etc/php/8.3/fpm/pool.d/www.conf
+
+#copy vhost file to docker
+COPY files/vhosts/000-default.conf /etc/apache2/sites-enabled/000-default.conf
+
+#Create Default SSL
+RUN mkdir -p /var/lib/apache/ssl
+RUN openssl req -x509 -nodes -days 365 \
+    -subj  "/C=CA/ST=QC/O=Company Inc/CN=example.com" \
+    -newkey rsa:2048 -keyout /var/lib/apache/ssl/default-ssl.key \
+    -out /var/lib/apache/ssl/default-ssl.crt;
+
+COPY files/vhosts/001-default-ssl.conf /etc/apache2/sites-available/001-default-ssl.conf
+
+# Enable Apache Modules
+RUN a2enmod ssl
+RUN a2enmod mpm_prefork
+RUN a2enmod php8.3
+
+# Enable PHP Mods
+RUN phpenmod gd
+RUN phpenmod bcmath
+
+# Enable SSL Site
+RUN a2ensite 001-default-ssl.conf
+
+#Copy site files to webroot folder
+RUN mkdir -p  /var/www/html
+RUN chown docker /var/www/html
+COPY --chown=docker:staff . /var/www/html
+
+#enable module rewrite
+RUN a2enmod rewrite
+
+#Set docker working folder to webroot
+WORKDIR /var/www/html
+
+##### START SERVER
+#Copy scripts needed to run the docker image
+RUN mkdir -p /supervisord.conf.d
+COPY files/entrypoint.sh files/supervisord/supervisord.conf /
+COPY files/supervisord/supervisor-exit-event-listener /usr/bin/supervisor-exit-event-listener
+RUN chmod +x /entrypoint.sh /usr/bin/supervisor-exit-event-listener
+
+#Remove the docker build files after build, no longer needed in the root of the site
+RUN if [ -d "/var/www/html/files" ]; then rm -Rf /var/www/html/files; fi
+
+#call the startup script on docker image run
+CMD ["/entrypoint.sh"]
+
+#expose the web port
+EXPOSE 80
+EXPOSE 443
