@@ -84,12 +84,15 @@ RUN apt-get install -qy --no-install-recommends \
     php7.2-dom \
     php7.2-mongodb \
     php7.2-dev \
-    php7.2-fpm
+    php7.2-fpm \
+    libapache2-mod-php7.2
  
 # Clearn up packages and cache
 RUN apt -y autoremove \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN update-rc.d php7.2-fpm disable
 
 # Install composer
 #global install of composer if you use php <= 7.2 then use composer version 2.2 else use latest 
@@ -103,6 +106,10 @@ RUN apt -y autoremove \
 #add docker user
 RUN useradd -m --uid 1000 --gid 50 docker
 
+# copy PHP FPM Configs
+COPY files/php/php-fpm.conf /etc/php/7.2/fpm/php-fpm.conf
+COPY files/php/pool.d/www.conf /etc/php/7.2/fpm/pool.d/www.conf
+
 #copy vhost file to docker
 COPY files/vhosts/000-default.conf /etc/apache2/sites-enabled/000-default.conf
 
@@ -115,10 +122,20 @@ RUN openssl req -x509 -nodes -days 365 \
 
 COPY files/vhosts/001-default-ssl.conf /etc/apache2/sites-available/001-default-ssl.conf
 
+# Enable Apache Modules
 RUN a2enmod ssl
+RUN a2enmod mpm_prefork
+RUN a2enmod php7.2
+
+# Enable PHP Mods
+RUN phpenmod gd
+RUN phpenmod bcmath
+
+# Enable SSL Site
 RUN a2ensite 001-default-ssl.conf
 
 #Copy site files to webroot folder
+RUN mkdir -p  /var/www/html
 RUN chown docker /var/www/html
 COPY --chown=docker:staff . /var/www/html
 
