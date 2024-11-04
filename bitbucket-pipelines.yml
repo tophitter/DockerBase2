@@ -1,5 +1,3 @@
-image: dvmgremp/ansible-build:bookworm
-
 pipelines:
     custom:
         build_deploy_docker:
@@ -7,6 +5,8 @@ pipelines:
                 name: "Build & Deploy Docker images"
                 image: ubuntu:22.04
                 script:
+                    - export DOCKER_BUILDKIT=1
+                    - mv builds/.env.ci builds/.env
                     - chmod +x builds/*.sh
                     - sh builds/run.sh ansible
                     - sh builds/run.sh deploy
