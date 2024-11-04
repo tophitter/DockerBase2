@@ -1,3 +1,6 @@
+options:
+  docker: true
+
 pipelines:
     custom:
         build_deploy_docker:

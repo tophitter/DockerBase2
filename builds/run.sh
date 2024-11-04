@@ -70,7 +70,11 @@ else
   else
     if [ ! -z ${CI_DOCKER_USERNAME+x} ] && [ "${CI_DOCKER_USERNAME}" != "" ] && [ ! -z ${CI_DOCKER_TOKEN+x} ] && [ "${CI_DOCKER_TOKEN}" != "" ]; then
         echo "logging into registry"
-        echo "${CI_DOCKER_TOKEN}" | docker login --username=$CI_DOCKER_USERNAME --password-stdin $CI_DOCKER_REGISTRY
+        if [ "$CI_ACTION_PUSH_IMAGES" = true ]; then
+          docker login --username $CI_DOCKER_USERNAME --password $CI_DOCKER_TOKEN $CI_DOCKER_REGISTRY
+        else
+          echo "${CI_DOCKER_TOKEN}" | docker login --username=$CI_DOCKER_USERNAME --password-stdin $CI_DOCKER_REGISTRY
+        fi
         export CI_ACTION_PUSH_IMAGES=true
     fi
   fi
