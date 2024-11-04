@@ -13,6 +13,7 @@ pipelines:
                     - docker
                 runs-on:
                     - ans.production
+                    - self.hosted
                 script:
                     - export DOCKER_BUILDKIT=1
                     - export DOCKER_CLI_EXPERIMENTAL=enabled
