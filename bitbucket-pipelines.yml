@@ -27,7 +27,7 @@ pipelines:
                     - docker version
                     - bash builds/run.sh ansible
                     - bash builds/run.sh deploy
-                    - bash builds/run.sh php
+                    - bash builds/run.sh php 7.4
         build_anisble_docker_images:
             - step:
                 name: "Build & Deploy Ansible Docker images"
