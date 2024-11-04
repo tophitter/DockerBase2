@@ -4,6 +4,8 @@ pipelines:
             - step:
                 name: "Build & Deploy Docker images"
                 image: ubuntu:22.04
+                services:
+                    - docker
                 script:
                     - export DOCKER_BUILDKIT=1
                     - mv builds/.env.ci builds/.env
