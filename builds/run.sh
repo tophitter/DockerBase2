@@ -71,7 +71,14 @@ else
     if [ ! -z ${CI_DOCKER_USERNAME+x} ] && [ "${CI_DOCKER_USERNAME}" != "" ] && [ ! -z ${CI_DOCKER_TOKEN+x} ] && [ "${CI_DOCKER_TOKEN}" != "" ]; then
         echo "logging into registry"
         if [ "$CI_ACTION_PUSH_IMAGES" = true ]; then
-          docker login --username $CI_DOCKER_USERNAME --password $CI_DOCKER_TOKEN $CI_DOCKER_REGISTRY
+          echo "CI PIPELINE LOGIN CALLED"
+          if [ "${CI_DOCKER_REGISTRY}" == "registry-1.docker.io" ]; then
+            # Login is default docker hub, do not provide the redistry url on login
+            docker login --username $CI_DOCKER_USERNAME --password $CI_DOCKER_TOKEN
+          else
+            # login nto useing the default docker hub registry provide redistry url on login
+            docker login --username $CI_DOCKER_USERNAME --password $CI_DOCKER_TOKEN $CI_DOCKER_REGISTRY
+          fi
         else
           echo "${CI_DOCKER_TOKEN}" | docker login --username=$CI_DOCKER_USERNAME --password-stdin $CI_DOCKER_REGISTRY
         fi
