@@ -3,13 +3,13 @@ pipelines:
         build_deploy_docker:
             - step:
                 name: "Build & Deploy Docker images"
-                image: ubuntu:22.04
                 services:
                     - docker
                 script:
                     - export DOCKER_BUILDKIT=1
                     - mv builds/.env.ci builds/.env
                     - chmod +x builds/*.sh
+                    - docker version
                     - bash builds/run.sh ansible
                     - bash builds/run.sh deploy
                     - bash builds/run.sh php
