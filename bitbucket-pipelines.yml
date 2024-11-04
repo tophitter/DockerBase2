@@ -3,6 +3,7 @@ pipelines:
         build_deploy_docker:
             - step:
                 name: "Build & Deploy Docker images"
+                image: debian:bookworm
                 services:
                     - docker
                 script:
