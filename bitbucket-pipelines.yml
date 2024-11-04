@@ -8,6 +8,6 @@ pipelines:
                     - export DOCKER_BUILDKIT=1
                     - mv builds/.env.ci builds/.env
                     - chmod +x builds/*.sh
-                    - sh builds/run.sh ansible
-                    - sh builds/run.sh deploy
-                    - sh builds/run.sh php
+                    - bash builds/run.sh ansible
+                    - bash builds/run.sh deploy
+                    - bash builds/run.sh php
