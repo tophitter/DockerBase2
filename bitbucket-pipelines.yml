@@ -1,5 +1,7 @@
-options:
-  docker: true
+definitions:
+  services:
+    docker: # Define a custom docker daemon - can only be used with a self-hosted runner
+      image: docker:dind
 
 pipelines:
     custom:
@@ -9,10 +11,18 @@ pipelines:
                 image: debian:bookworm
                 services:
                     - docker
+                runs-on:
+                    - ans.production
                 script:
                     - export DOCKER_BUILDKIT=1
+                    - export DOCKER_CLI_EXPERIMENTAL=enabled
                     - mv builds/.env.ci builds/.env
                     - chmod +x builds/*.sh
+                    - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
+                    - export BUILDX_VERSION=0.11.0  # define what BUILDX_VERSION to download and install
+                    - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
+                    - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
+                    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
                     - docker version
                     - bash builds/run.sh ansible
                     - bash builds/run.sh deploy
