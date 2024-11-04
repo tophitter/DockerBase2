@@ -8,7 +8,7 @@ pipelines:
         build_deploy_docker:
             - step:
                 name: "Build & Deploy Docker images"
-                image: debian:bookworm
+                image: atlassian/default-image:4
                 services:
                     - docker
                 runs-on:
