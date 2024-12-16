@@ -9,6 +9,7 @@ for file in $SCRIPTPATH/../Debian/php/*; do
     if [ -d $file ]; then
         # Check if there is a .disabled file if so skip build
         if [ -f "${file}/.disabled" ]; then
+            echo "${file} is disabled, Skipping..."
             continue
         fi
 
@@ -17,11 +18,12 @@ for file in $SCRIPTPATH/../Debian/php/*; do
         # Make the version lowercase
         PHP_VERSION=$(echo "$PHP_VERSION" | tr '[:upper:]' '[:lower:]')
         if [ "${TARGET_PHP_VERSION}" != "" ] && [ "${TARGET_PHP_VERSION}" != "${PHP_VERSION}" ]; then
+            echo "PHP Version: ${PHP_VERSION} not match Target version: ${TARGET_PHP_VERSION}. Skipping..."
             continue;
         fi
 
         # Look for the Docker file for the build image
-        if [ "${ACTION_SCRIPT}" = "" ] || [ "${ACTION_SCRIPT}" = "build" ]; then
+        if [ "${ACTION_SCRIPT}" = "" ] || "${ACTION_SCRIPT}" = "all" ] || [ "${ACTION_SCRIPT}" = "build" ]; then
             if [ -f "${file}/build/Dockerfile" ]; then
                 # Check if there is a .disabled file if so skip build
                 if ! [ -f "${file}/build/.disabled" ]; then
@@ -38,7 +40,7 @@ for file in $SCRIPTPATH/../Debian/php/*; do
         fi
 
         # Look for the Docker file for the apache image
-        if [ "${ACTION_SCRIPT}" = "" ] || [ "${ACTION_SCRIPT}" = "apache" ]; then
+        if [ "${ACTION_SCRIPT}" = "" ] || "${ACTION_SCRIPT}" = "all" ] || [ "${ACTION_SCRIPT}" = "apache" ]; then
             if [ -f "${file}/apache/Dockerfile" ]; then
                 # Check if there is a .disabled file if so skip build
                 if ! [ -f "${file}/apache/.disabled" ]; then

@@ -27,7 +27,7 @@ pipelines:
                     - docker version
                     - bash builds/run.sh ansible
                     - bash builds/run.sh deploy
-                    - bash builds/run.sh php 7.4
+                    - bash builds/run.sh php all
         build_anisble_docker_images:
             - step:
                 name: "Build & Deploy Ansible Docker images"
@@ -90,4 +90,4 @@ pipelines:
                     - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
                     - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
                     - docker version
-                    - bash builds/run.sh php
+                    - bash builds/run.sh php all
