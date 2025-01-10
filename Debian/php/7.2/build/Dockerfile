@@ -28,7 +28,10 @@ RUN apt-get install -qy --no-install-recommends \
     git \
     unzip \
     curl \
-    openssh-client
+    openssh-client \
+    ca-certificates
+
+RUN update-ca-certificates
 
 #Install PHP 7.2 packages
 RUN apt-get install -qy --no-install-recommends \
@@ -64,6 +67,13 @@ COPY --from=composer:2.2 /usr/bin/composer /usr/bin/composer
 SHELL ["/bin/bash", "--login", "-c"]
 RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.39.7/install.sh | bash
 RUN nvm install node
+
+#Insall AWS CLI 
+RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+RUN unzip awscliv2.zip
+RUN ./aws/install
+#Remove the downloaded ZIP file
+RUN rm awscliv2.zip
 
 # Clearn up packages and cache
 RUN apt -y autoremove \
