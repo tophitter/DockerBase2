@@ -23,7 +23,7 @@ for file in $SCRIPTPATH/../Debian/php/*; do
         fi
 
         # Look for the Docker file for the build image
-        if [ "${ACTION_SCRIPT}" = "" ] || "${ACTION_SCRIPT}" = "all" ] || [ "${ACTION_SCRIPT}" = "build" ]; then
+        if [ "${ACTION_SCRIPT}" = "" ] || [ "${ACTION_SCRIPT}" = "all" ] || [ "${ACTION_SCRIPT}" = "build" ]; then
             if [ -f "${file}/build/Dockerfile" ]; then
                 # Check if there is a .disabled file if so skip build
                 if ! [ -f "${file}/build/.disabled" ]; then
@@ -40,7 +40,7 @@ for file in $SCRIPTPATH/../Debian/php/*; do
         fi
 
         # Look for the Docker file for the apache image
-        if [ "${ACTION_SCRIPT}" = "" ] || "${ACTION_SCRIPT}" = "all" ] || [ "${ACTION_SCRIPT}" = "apache" ]; then
+        if [ "${ACTION_SCRIPT}" = "" ] || [ "${ACTION_SCRIPT}" = "all" ] || [ "${ACTION_SCRIPT}" = "apache" ]; then
             if [ -f "${file}/apache/Dockerfile" ]; then
                 # Check if there is a .disabled file if so skip build
                 if ! [ -f "${file}/apache/.disabled" ]; then

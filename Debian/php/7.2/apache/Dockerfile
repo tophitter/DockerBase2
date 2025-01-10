@@ -46,7 +46,9 @@ RUN apt install -y mysql-client
 
 # Install supervisor
 RUN apt-get install -yqy --no-install-recommends \
-    supervisor 
+    supervisor \
+    nano \
+    jq
 
 # Install apache
 RUN apt-get install -qy --no-install-recommends \
@@ -93,6 +95,11 @@ RUN apt -y autoremove \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 RUN update-rc.d php7.2-fpm disable
+
+##Set Some PHP Configs by default
+RUN sed -i 's/variables_order = .*/variables_order = "EGPCS"/' /etc/php/7.2/apache2/php.ini
+RUN sed -i 's/variables_order = .*/variables_order = "EGPCS"/' /etc/php/7.2/cli/php.ini
+RUN sed -i 's/variables_order = .*/variables_order = "EGPCS"/' /etc/php/7.2/fpm/php.ini
 
 # Install composer
 #global install of composer if you use php <= 7.2 then use composer version 2.2 else use latest 
@@ -141,6 +148,9 @@ COPY --chown=docker:staff . /var/www/html
 
 #enable module rewrite
 RUN a2enmod rewrite
+RUN a2enmod proxy
+RUN a2enmod proxy_fcgi
+RUN a2enmod proxy_http
 
 #Set docker working folder to webroot
 WORKDIR /var/www/html
@@ -154,6 +164,7 @@ RUN chmod +x /entrypoint.sh /usr/bin/supervisor-exit-event-listener
 
 #Remove the docker build files after build, no longer needed in the root of the site
 RUN if [ -d "/var/www/html/files" ]; then rm -Rf /var/www/html/files; fi
+
 
 #call the startup script on docker image run
 CMD ["/entrypoint.sh"]
