@@ -4,6 +4,11 @@
 ACTION_SCRIPT=$2
 TARGET_PHP_VERSION=$3
 
+#If PHP Version is `all` then empty the var as empty string default will build all versions
+if [ "${TARGET_PHP_VERSION}" == "all" ]; then
+TARGET_PHP_VERSION="";
+fi
+
 for file in $SCRIPTPATH/../Debian/php/*; do
     #Check this is a folder
     if [ -d $file ]; then
