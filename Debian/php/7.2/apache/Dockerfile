@@ -120,6 +120,9 @@ COPY files/php/pool.d/www.conf /etc/php/7.2/fpm/pool.d/www.conf
 #copy vhost file to docker
 COPY files/vhosts/000-default.conf /etc/apache2/sites-enabled/000-default.conf
 
+# Copy the apache config file in 
+COPY files/apache/apache.conf /etc/apache2/apache2.conf
+
 #Create Default SSL
 RUN mkdir -p /var/lib/apache/ssl
 RUN openssl req -x509 -nodes -days 365 \
