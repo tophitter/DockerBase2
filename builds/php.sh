@@ -32,7 +32,7 @@ for file in $SCRIPTPATH/../Debian/php/*; do
             if [ -f "${file}/build/Dockerfile" ]; then
                 # Check if there is a .disabled file if so skip build
                 if ! [ -f "${file}/build/.disabled" ]; then
-                    IMAGE_NAME="${CI_DOCKER_NAMESPACE}/php${PHP_VERSION}-build:bookworm"
+                    IMAGE_NAME="${CI_DOCKER_NAMESPACE}/php${PHP_VERSION}-build:bookworm${IMAGE_TAG_SUFFIX}"
                     if [ "$CI_ACTION_PUSH_IMAGES" = true ]; then
                         echo "Creating & Pushing Image ${IMAGE_NAME}"
                         ${DOCKER_BUILD_COMMAND} -t ${IMAGE_NAME} -f ${file}/build/Dockerfile ${file}/build --push
@@ -49,7 +49,7 @@ for file in $SCRIPTPATH/../Debian/php/*; do
             if [ -f "${file}/apache/Dockerfile" ]; then
                 # Check if there is a .disabled file if so skip build
                 if ! [ -f "${file}/apache/.disabled" ]; then
-                    IMAGE_NAME="${CI_DOCKER_NAMESPACE}/php${PHP_VERSION}-apache:bookworm"
+                    IMAGE_NAME="${CI_DOCKER_NAMESPACE}/php${PHP_VERSION}-apache:bookworm${IMAGE_TAG_SUFFIX}"
                     if [ "$CI_ACTION_PUSH_IMAGES" = true ]; then
                         echo "Creating & Pushing Image ${IMAGE_NAME}"
                         ${DOCKER_BUILD_COMMAND} -t ${IMAGE_NAME} -f ${file}/apache/Dockerfile ${file}/apache --push

@@ -15,6 +15,9 @@ fi
 
 BUILD_SCRIPT=$1
 
+IMAGE_TAG_SUFFIX="${IMAGE_TAG_SUFFIX:-}"
+export IMAGE_TAG_SUFFIX;
+
 DEV_MODE="${DEV_MODE:false}"
 export DEV_MODE;
 

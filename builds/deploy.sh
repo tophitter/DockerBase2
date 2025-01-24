@@ -1,6 +1,6 @@
 #!/bin/bash
 
-IMAGE_NAME="${CI_DOCKER_NAMESPACE}/ci-deploy:bookworm"
+IMAGE_NAME="${CI_DOCKER_NAMESPACE}/ci-deploy:bookworm${IMAGE_TAG_SUFFIX}"
 
 if [ "$CI_ACTION_PUSH_IMAGES" = true ]; then
     echo "Creating & Pushing Image ${IMAGE_NAME}"
