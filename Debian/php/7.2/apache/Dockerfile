@@ -35,7 +35,8 @@ RUN apt-get install -qy --no-install-recommends \
     curl \
     cron \
     openssh-client \
-    apt-utils
+    apt-utils \
+    less
 
 # Install MySQL Client
 RUN wget https://dev.mysql.com/get/mysql-apt-config_${MYSQL_PKG_VERSION}_all.deb
@@ -149,6 +150,13 @@ RUN mkdir -p  /var/www/html
 RUN chown docker /var/www/html
 COPY --chown=docker:staff . /var/www/html
 
+# Setup Logs and Redirect to docker container stdout
+RUN mkdir -p  /var/www/logs
+RUN touch /var/www/logs/php_error.log
+RUN chown -R docker:staff /var/www/logs
+
+# RUN ln -sf /proc/self/fd/2 /var/www/logs/php_error.log
+
 #enable module rewrite
 RUN a2enmod rewrite
 RUN a2enmod proxy
@@ -167,6 +175,7 @@ RUN chmod +x /entrypoint.sh /usr/bin/supervisor-exit-event-listener
 
 #Remove the docker build files after build, no longer needed in the root of the site
 RUN if [ -d "/var/www/html/files" ]; then rm -Rf /var/www/html/files; fi
+
 
 
 #call the startup script on docker image run
