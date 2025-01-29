@@ -5,192 +5,150 @@ definitions:
 
 pipelines:
     custom: 
-        build_all_docker_images:
+        ci_builder_docker:
+            # This one need to be useing the `atlassian/default-image:4`
+            # It will create the Build image all the other tasks in this repo will need
+            - step:
+                name: "Build & Deploy CI Builder Image for Docker"
+                image: atlassian/default-image:4
+                services:
+                    - docker
+                runs-on:
+                    - ans.production
+                    - self.hosted
+                script:
+                    - export DOCKER_BUILDKIT=1
+                    - export DOCKER_CLI_EXPERIMENTAL=enabled
+                    - mv builds/.env.ci builds/.env
+                    - chmod +x builds/*.sh
+                    - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
+                    - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
+                    - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
+                    - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
+                    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
+                    - docker version
+                    - bash builds/run.sh --application=docker
+        build_all_base_images:
             - step:
                 name: "Build & Deploy All Docker images"
-                image: atlassian/default-image:4
+                image: dvmgremp/ci-builder:docker-bookworm
                 services:
                     - docker
                 runs-on:
                     - ans.production
                     - self.hosted
                 script:
-                    - export DOCKER_BUILDKIT=1
-                    - export DOCKER_CLI_EXPERIMENTAL=enabled
                     - mv builds/.env.ci builds/.env
                     - chmod +x builds/*.sh
-                    - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
-                    - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
-                    - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
-                    - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
-                    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
-                    - docker version
-                    - bash builds/run.sh ansible
-                    - bash builds/run.sh deploy
-                    - bash builds/run.sh php all
-        build_anisble_docker_images:
+                    - bash builds/run.sh --application=ansible
+                    - bash builds/run.sh --application=deploy
+                    - bash builds/run.sh --application=php
+        ci_builder_ansible:
             - step:
-                name: "Build & Deploy Ansible Docker images"
-                image: atlassian/default-image:4
+                name: "Build & Deploy CI Builder for Ansible"
+                image: dvmgremp/ci-builder:docker-bookworm
                 services:
                     - docker
                 runs-on:
                     - ans.production
                     - self.hosted
                 script:
-                    - export DOCKER_BUILDKIT=1
-                    - export DOCKER_CLI_EXPERIMENTAL=enabled
                     - mv builds/.env.ci builds/.env
                     - chmod +x builds/*.sh
-                    - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
-                    - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
-                    - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
-                    - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
-                    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
-                    - docker version
-                    - bash builds/run.sh ansible
-        build_deploy_docker_images:
+                    - bash builds/run.sh --application=ansible
+        ci_builder_deploy:
             - step:
-                name: "Build & Deploy 'Deploy' Docker images"
-                image: atlassian/default-image:4
+                name: "Build & Deploy CI Builder for 'Deploy' Image"
+                image: dvmgremp/ci-builder:docker-bookworm
                 services:
                     - docker
                 runs-on:
                     - ans.production
                     - self.hosted
                 script:
-                    - export DOCKER_BUILDKIT=1
-                    - export DOCKER_CLI_EXPERIMENTAL=enabled
                     - mv builds/.env.ci builds/.env
                     - chmod +x builds/*.sh
-                    - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
-                    - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
-                    - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
-                    - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
-                    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
-                    - docker version
-                    - bash builds/run.sh deploy
-        build_php_docker_images:
+                    - bash builds/run.sh --application=deploy
+        build_all_base_php_images:
             - stage:
                name: "Build & Publish PHP 7.2 Images"
                steps:
                 - step: 
                     name: "Apache"
-                    image: atlassian/default-image:4
+                    image: dvmgremp/ci-builder:docker-bookworm
                     services:
                         - docker
                     runs-on:
                         - ans.production
                         - self.hosted
                     script:
-                        - export DOCKER_BUILDKIT=1
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled
                         - mv builds/.env.ci builds/.env
                         - chmod +x builds/*.sh
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
-                        - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
-                        - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
-                        - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
-                        - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
-                        - bash builds/run.sh php apache 7.2
+                        - bash builds/run.sh --application=php --module=apache --version=7.2
                 - step: 
                     name: "Build"
-                    image: atlassian/default-image:4
+                    image: dvmgremp/ci-builder:docker-bookworm
                     services:
                         - docker
                     runs-on:
                         - ans.production
                         - self.hosted
                     script:
-                        - export DOCKER_BUILDKIT=1
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled
                         - mv builds/.env.ci builds/.env
                         - chmod +x builds/*.sh
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
-                        - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
-                        - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
-                        - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
-                        - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
-                        - bash builds/run.sh php build 7.2
+                        - bash builds/run.sh --application=php --module=build --version=7.2
             - stage:
                name: "Build & Publish PHP 7.4 Images"
                steps:
                 - step: 
                     name: "Apache"
-                    image: atlassian/default-image:4
+                    image: dvmgremp/ci-builder:docker-bookworm
                     services:
                         - docker
                     runs-on:
                         - ans.production
                         - self.hosted
                     script:
-                        - export DOCKER_BUILDKIT=1
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled
                         - mv builds/.env.ci builds/.env
                         - chmod +x builds/*.sh
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
-                        - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
-                        - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
-                        - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
-                        - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
-                        - bash builds/run.sh php apache 7.4
+                        - bash builds/run.sh --application=php --module=apache --version=7.4
                 - step: 
                     name: "Build"
-                    image: atlassian/default-image:4
+                    image: dvmgremp/ci-builder:docker-bookworm
                     services:
                         - docker
                     runs-on:
                         - ans.production
                         - self.hosted
                     script:
-                        - export DOCKER_BUILDKIT=1
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled
                         - mv builds/.env.ci builds/.env
                         - chmod +x builds/*.sh
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
-                        - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
-                        - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
-                        - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
                         - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
-                        - bash builds/run.sh php build 7.4
+                        - bash builds/run.sh --application=php --module=build --version=7.4
             - stage:
                name: "Build & Publish PHP 8.3 Images"
                steps:
                 - step: 
                     name: "Apache"
-                    image: atlassian/default-image:4
+                    image: dvmgremp/ci-builder:docker-bookworm
                     services:
                         - docker
                     runs-on:
                         - ans.production
                         - self.hosted
                     script:
-                        - export DOCKER_BUILDKIT=1
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled
                         - mv builds/.env.ci builds/.env
                         - chmod +x builds/*.sh
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
-                        - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
-                        - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
-                        - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
-                        - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
-                        - bash builds/run.sh php apache 8.3
+                        - bash builds/run.sh --application=php --module=apache --version=8.3
                 - step: 
                     name: "Build"
-                    image: atlassian/default-image:4
+                    image: dvmgremp/ci-builder:docker-bookworm
                     services:
                         - docker
                     runs-on:
                         - ans.production
                         - self.hosted
                     script:
-                        - export DOCKER_BUILDKIT=1
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled
                         - mv builds/.env.ci builds/.env
                         - chmod +x builds/*.sh
-                        - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
-                        - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
-                        - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
-                        - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
-                        - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
-                        - bash builds/run.sh php build 8.3
+                        - bash builds/run.sh --application=php --module=build --version=8.3

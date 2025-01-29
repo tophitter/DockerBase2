@@ -57,7 +57,7 @@ RUN apt-get install -qy --no-install-recommends \
 RUN echo export APACHE_RUN_USER=docker >> /etc/apache2/envvars
 RUN echo export APACHE_RUN_GROUP=staff >> /etc/apache2/envvars
 
-#disable appache auto boot as it be controlled by supervisord
+#disable apache auto boot as it be controlled by supervisord
 RUN update-rc.d apache2 disable
 
 #Install PHP 8.3 packages
@@ -87,7 +87,7 @@ RUN apt-get install -qy --no-install-recommends \
     php8.3-fpm \
     libapache2-mod-php8.3
  
-# Clearn up packages and cache
+# Clean up packages and cache
 RUN apt -y autoremove \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -98,7 +98,7 @@ RUN update-rc.d php8.3-fpm disable
 #global install of composer if you use php <= 7.2 then use composer version 2.2 else use latest 
 COPY --from=composer:2.2 /usr/bin/composer /usr/bin/composer
 
-# Clearn up packages and cache
+# Clean up packages and cache
 RUN apt -y autoremove \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

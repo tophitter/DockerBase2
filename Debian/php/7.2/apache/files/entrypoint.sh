@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#Workaround to allow Enverments from AWS to be sent to the Apache Envs fiel to allow site to use them
+#Workaround to allow environments from AWS to be sent to the Apache Envs file to allow site to use them
 #for I in `cat /proc/1/environ | strings`; do echo "export $I"; done >> /etc/apache2/envvars
 
 if [ -f /var/lib/apache/ssl/default-ssl.crt -a -f /var/lib/apache/ssl/default-ssl.key ]; then

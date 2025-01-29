@@ -22,7 +22,7 @@ RUN apt-get install -qy --no-install-recommends \
     curl \
     openssh-client
  
-# Clearn up packages and cache
+# Clean up packages and cache
 RUN apt -y autoremove \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

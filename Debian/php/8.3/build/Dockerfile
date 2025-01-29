@@ -60,7 +60,7 @@ RUN apt-get install -qy --no-install-recommends \
 #global install of composer if you use php <= 7.2 then use composer version 2.2 else use latest 
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-# Clearn up packages and cache
+# Clean up packages and cache
 RUN apt -y autoremove \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*

@@ -1,12 +1,17 @@
 #!/bin/bash
 
+if [ -z ${SCRIPTPATH+x} ] || [ -z "${SCRIPTPATH}" ]; then
+    echo "Missing Script Path, Make sure you are calling the 'run.sh' and not 'php.sh'!"
+    exit 1
+fi
+
 # Action args
-ACTION_SCRIPT=$2
-TARGET_PHP_VERSION=$3
+ACTION_SCRIPT="${BUILD_EXTRA_MODULE:-}"
+TARGET_PHP_VERSION="${BUILD_EXTRA_VERSION}"
 
 #If PHP Version is `all` then empty the var as empty string default will build all versions
 if [ "${TARGET_PHP_VERSION}" == "all" ]; then
-TARGET_PHP_VERSION="";
+    TARGET_PHP_VERSION="";
 fi
 
 for file in $SCRIPTPATH/../Debian/php/*; do
@@ -32,14 +37,7 @@ for file in $SCRIPTPATH/../Debian/php/*; do
             if [ -f "${file}/build/Dockerfile" ]; then
                 # Check if there is a .disabled file if so skip build
                 if ! [ -f "${file}/build/.disabled" ]; then
-                    IMAGE_NAME="${CI_DOCKER_NAMESPACE}/php${PHP_VERSION}-build:bookworm${IMAGE_TAG_SUFFIX}"
-                    if [ "$CI_ACTION_PUSH_IMAGES" = true ]; then
-                        echo "Creating & Pushing Image ${IMAGE_NAME}"
-                        ${DOCKER_BUILD_COMMAND} -t ${IMAGE_NAME} -f ${file}/build/Dockerfile ${file}/build --push
-                    else
-                        echo "Creating Image ${IMAGE_NAME}"
-                        ${DOCKER_BUILD_COMMAND} -t $IMAGE_NAME -f ${file}/build/Dockerfile ${file}/build 
-                    fi
+                    build_image "php${PHP_VERSION}-build" "bookworm" "Debian/php/${PHP_VERSION}/build"
                 fi
             fi
         fi
@@ -49,14 +47,7 @@ for file in $SCRIPTPATH/../Debian/php/*; do
             if [ -f "${file}/apache/Dockerfile" ]; then
                 # Check if there is a .disabled file if so skip build
                 if ! [ -f "${file}/apache/.disabled" ]; then
-                    IMAGE_NAME="${CI_DOCKER_NAMESPACE}/php${PHP_VERSION}-apache:bookworm${IMAGE_TAG_SUFFIX}"
-                    if [ "$CI_ACTION_PUSH_IMAGES" = true ]; then
-                        echo "Creating & Pushing Image ${IMAGE_NAME}"
-                        ${DOCKER_BUILD_COMMAND} -t ${IMAGE_NAME} -f ${file}/apache/Dockerfile ${file}/apache --push
-                    else
-                        echo "Creating Image ${IMAGE_NAME}"
-                        ${DOCKER_BUILD_COMMAND} -t $IMAGE_NAME -f ${file}/apache/Dockerfile ${file}/apache 
-                    fi
+                    build_image "php${PHP_VERSION}-apache" "bookworm" "Debian/php/${PHP_VERSION}/apache"
                 fi
             fi
         fi

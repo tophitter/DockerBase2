@@ -76,7 +76,7 @@ RUN ./aws/install
 RUN rm awscliv2.zip
 RUN rm -r ./aws
 
-# Clearn up packages and cache
+# Clean up packages and cache
 RUN apt -y autoremove \
     && apt clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
