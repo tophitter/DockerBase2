@@ -29,7 +29,8 @@ RUN apt-get install -qy --no-install-recommends \
     unzip \
     curl \
     openssh-client \
-    ca-certificates
+    ca-certificates \
+    jq
 
 RUN update-ca-certificates
 
