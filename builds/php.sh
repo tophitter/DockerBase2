@@ -17,12 +17,6 @@ fi
 for file in $SCRIPTPATH/../Debian/php/*; do
     #Check this is a folder
     if [ -d $file ]; then
-        # Check if there is a .disabled file if so skip build
-        if [ -f "${file}/.disabled" ]; then
-            echo "${file} is disabled, Skipping..."
-            continue
-        fi
-
         # Build the PHP Version from the folder name
         PHP_VERSION="$(basename -- $file)"
         # Make the version lowercase
@@ -30,6 +24,12 @@ for file in $SCRIPTPATH/../Debian/php/*; do
         if [ "${TARGET_PHP_VERSION}" != "" ] && [ "${TARGET_PHP_VERSION}" != "${PHP_VERSION}" ]; then
             echo "PHP Version: ${PHP_VERSION} not match Target version: ${TARGET_PHP_VERSION}. Skipping..."
             continue;
+        fi
+
+        # Check if there is a .disabled file if so skip build - MUST BE CALLED AFTER THE VERSION CHECK TO THE CORRECT ERROR IS SHOWN
+        if [ -f "${file}/.disabled" ]; then
+            echo "${file} is disabled, Skipping..."
+            continue
         fi
 
         # Look for the Docker file for the build image

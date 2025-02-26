@@ -1,28 +1,37 @@
 #!/bin/bash
+#
+# Main Docker APP Entry point that is called to start all Required services and trigger on boot actions pass in by user provided data / env switch
+#
 
-#Workaround to allow environments from AWS to be sent to the Apache Envs file to allow site to use them
-#for I in `cat /proc/1/environ | strings`; do echo "export $I"; done >> /etc/apache2/envvars
-
+# If we have an SSL CRT in the docker file then enable SSL for apache
 if [ -f /var/lib/apache/ssl/default-ssl.crt -a -f /var/lib/apache/ssl/default-ssl.key ]; then
   a2enmod ssl
 else
   a2dismod ssl
 fi
 
-# Fix php settings
+# Set File UPLOAD Limit From Launch Environment var
 if [ -v "PHP_UPLOAD_LIMIT" ]; then
-  echo "Changing upload limit to ${PHP_UPLOAD_LIMIT}"
-  sed -i "s/^upload_max_filesize.*/upload_max_filesize = ${PHP_UPLOAD_LIMIT}M/" /etc/php/*/apache2/php.ini
+  PHP_UPLOAD_LIMIT_SIZE_TYPE="${PHP_UPLOAD_LIMIT_SIZE_TYPE:'M'}"
+  echo "Changing upload limit to ${PHP_UPLOAD_LIMIT}${PHP_UPLOAD_LIMIT_SIZE_TYPE}"
+  sh /opt/set_php_file_upload_limit.sh ${PHP_UPLOAD_LIMIT} ${PHP_UPLOAD_LIMIT_SIZE_TYPE}
 fi
 
+# Set Session Handler From Launch Environment var (if SET)
+if [ -v "PHP_SESSION_SAVE_PATH" ]; then
+  echo "Changing session handler and PATH to ${PHP_SESSION_HANDLER:files} ${PHP_SESSION_SAVE_PATH}"
+  sh /opt/set_redis_php_sessions.sh ${PHP_SESSION_HANDLER:files} ${PHP_SESSION_SAVE_PATH}
+fi
+
+# If the app-entrypoint exists then run it (this is a user passed in action to be run before the app is started)
 if [ -f "/app-entrypoint.sh" ]; then
   sh /app-entrypoint.sh
 fi
 
+# Start the `supervisord` process
 exec supervisord -c /supervisord.conf
 
+# If the `after-start-entrypoint.sh` script is found then run it - (this is a user passed in script to run actions after the app has started)
 if [ -f "/after-start-entrypoint.sh" ]; then
   sh /after-start-entrypoint.sh
 fi
-
-# cat /src/.profile

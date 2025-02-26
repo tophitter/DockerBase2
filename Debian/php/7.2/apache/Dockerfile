@@ -7,6 +7,9 @@ ARG WWWGROUP
 #Define versions
 ARG MYSQL_PKG_VERSION=0.8.29-1
 
+# Redis Connection string for PHP Session Store if it baked in
+ARG SessionRedisConnectionString
+
 ENV DEBIAN_FRONTEND noninteractive
 ENV DEBCONF_NONINTERACTIVE_SEEN true
 ENV TZ=Europe/London
@@ -115,8 +118,8 @@ RUN apt -y autoremove \
 RUN useradd -m --uid 1000 --gid 50 docker
 
 # copy PHP FPM Configs
-COPY files/php/php-fpm.conf /etc/php/7.2/fpm/php-fpm.conf
-COPY files/php/pool.d/www.conf /etc/php/7.2/fpm/pool.d/www.conf
+COPY files/php/fpm/php-fpm.conf /etc/php/7.2/fpm/php-fpm.conf
+COPY files/php/fpm/pool.d/www.conf /etc/php/7.2/fpm/pool.d/www.conf
 
 #copy vhost file to docker
 COPY files/vhosts/000-default.conf /etc/apache2/sites-enabled/000-default.conf
@@ -158,10 +161,14 @@ RUN chown -R docker:staff /var/www/logs
 # RUN ln -sf /proc/self/fd/2 /var/www/logs/php_error.log
 
 #enable module rewrite
+RUN a2enmod headers
+RUN a2enmod http2
+RUN a2enmod remoteip
 RUN a2enmod rewrite
 RUN a2enmod proxy
 RUN a2enmod proxy_fcgi
 RUN a2enmod proxy_http
+RUN a2enmod status
 
 #Set docker working folder to web-root
 WORKDIR /var/www/html
@@ -173,10 +180,15 @@ COPY files/entrypoint.sh files/supervisord/supervisord.conf /
 COPY files/supervisord/supervisor-exit-event-listener /usr/bin/supervisor-exit-event-listener
 RUN chmod +x /entrypoint.sh /usr/bin/supervisor-exit-event-listener
 
+# copy tools scripts to /opt
+COPY files/tools /opt/
+RUN chmod +x /opt/*.sh
+
 #Remove the docker build files after build, no longer needed in the root of the site
 RUN if [ -d "/var/www/html/files" ]; then rm -Rf /var/www/html/files; fi
 
-
+# If Redis Session is basked into the Build Args then runs setup else ignore
+RUN if [[ -z "$SessionRedisConnectionString" ]] ; then sh /opt/set_redis_php_sessions.sh redis $SessionRedisConnectionString ; fi
 
 #call the startup script on docker image run
 CMD ["/entrypoint.sh"]
