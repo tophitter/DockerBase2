@@ -1,19 +1,45 @@
-FROM debian:bookworm
+ARG BASE_IMAGE=debian:bookworm
+
+FROM ${BASE_IMAGE}
 
 LABEL maintainer="Jason Townsend"
 
-ENV DEBIAN_FRONTEND noninteractive
+# Args
+ARG BUILD_DATE
+ARG REVISION
+ARG BUILD_VERSION
+ARG DEBIAN_FRONTEND=noninteractive
+
+#Environment Variables
 ENV DEBCONF_NONINTERACTIVE_SEEN true
 ENV TZ=Europe/London
+
+ENV NODE_VERSION=18.16.1 \
+    NVM_DIR=/root/.nvm \
+    NVM_VERSION=0.39.2 \
+    NVM_SHA256=c1e672cd63737cd3e166ad43dffcb630a3bea07484705eae303c4b6c3e42252a
+
+# Labels
+LABEL \
+    org.opencontainers.image.base.name="docker.io/library/${BASE_IMAGE}"\
+    org.opencontainers.image.created=$BUILD_DATE \
+    org.opencontainers.image.title="dvmgremp/php7.2-build:bookworm" \
+    org.opencontainers.image.description="Docker Builder for PHP Scripts" \
+    org.opencontainers.image.revision=$REVISION \
+    org.opencontainers.image.version=$BUILD_VERSION 
 
 #set timezone of docker image
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
+#Update and apply any updates to the BASE Image if able to do so
+RUN apt update && apt upgrade -y
+
 #install require packages
-RUN apt update && apt upgrade -y && apt install -y lsb-release curl gnupg
+RUN apt install -y lsb-release curl gnupg
+RUN apt install -y lsb-release ca-certificates apt-transport-https software-properties-common
 
 # Add Ondrej's repo source and signing key along with dependencies
-RUN export LC_ALL=en_GB.UTF-8 && export LANG=en_GB.UTF-8 && apt-get install -y ca-certificates apt-transport-https software-properties-common
+RUN export LC_ALL=en_GB.UTF-8 && export LANG=en_GB.UTF-8 
 #RUN curl -sSLo /usr/share/keyrings/deb.sury.org-php.gpg https://packages.sury.org/php/apt.gpg
 RUN curl -sSLo /tmp/debsuryorg-archive-keyring.deb https://packages.sury.org/debsuryorg-archive-keyring.deb
 RUN dpkg -i /tmp/debsuryorg-archive-keyring.deb
@@ -64,10 +90,22 @@ RUN apt-get install -qy --no-install-recommends \
 #global install of composer if you use php <= 7.2 then use composer version 2.2 else use latest 
 COPY --from=composer:2.2 /usr/bin/composer /usr/bin/composer
 
-# Install NVM
-SHELL ["/bin/bash", "--login", "-c"]
-RUN curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.39.7/install.sh | bash
-RUN nvm install node
+# Install nvm with node and npm
+RUN curl https://raw.githubusercontent.com/nvm-sh/nvm/v$NVM_VERSION/install.sh -o install_nvm.sh \
+    && echo "${NVM_SHA256} install_nvm.sh" | sha256sum -c - \
+    && bash install_nvm.sh \
+    && rm -rf install_nvm.sh \
+    && . $NVM_DIR/nvm.sh \
+    && nvm install $NODE_VERSION \
+    && nvm install 14.17.5 \
+    && nvm alias default $NODE_VERSION \
+    && nvm use default
+
+# Set node path
+ENV NODE_PATH=$NVM_DIR/v$NODE_VERSION/lib/node_modules
+
+# Set the path.
+ENV PATH=$NVM_DIR:$NVM_DIR/versions/node/v$NODE_VERSION/bin:$PATH
 
 #Insall AWS CLI 
 RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"

@@ -11,6 +11,7 @@
 /tests/apache/php*/logs
 /tests/apache/php*/vendor
 /tests/apache/php*/composer.lock
+/tests/traefik/*
 
 # Node artifact files
 node_modules/

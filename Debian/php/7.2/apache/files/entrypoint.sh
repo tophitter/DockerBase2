@@ -12,7 +12,7 @@ fi
 
 # Set File UPLOAD Limit From Launch Environment var
 if [ -v "PHP_UPLOAD_LIMIT" ]; then
-  PHP_UPLOAD_LIMIT_SIZE_TYPE="${PHP_UPLOAD_LIMIT_SIZE_TYPE:'M'}"
+  PHP_UPLOAD_LIMIT_SIZE_TYPE="${PHP_UPLOAD_LIMIT_SIZE_TYPE:-M}"
   echo "Changing upload limit to ${PHP_UPLOAD_LIMIT}${PHP_UPLOAD_LIMIT_SIZE_TYPE}"
   sh /opt/set_php_file_upload_limit.sh ${PHP_UPLOAD_LIMIT} ${PHP_UPLOAD_LIMIT_SIZE_TYPE}
 fi
@@ -23,13 +23,18 @@ if [ -v "PHP_SESSION_SAVE_PATH" ]; then
   sh /opt/set_redis_php_sessions.sh ${PHP_SESSION_HANDLER:files} ${PHP_SESSION_SAVE_PATH}
 fi
 
+# Setup Filebeat if script is set
+if [ -f "/opt/setup_filebeat.sh" ]; then
+  source /opt/setup_filebeat.sh
+fi
+
 # If the app-entrypoint exists then run it (this is a user passed in action to be run before the app is started)
 if [ -f "/app-entrypoint.sh" ]; then
   sh /app-entrypoint.sh
 fi
 
 # Start the `supervisord` process
-exec supervisord -c /supervisord.conf
+exec supervisord -c /etc/supervisor/supervisord.conf
 
 # If the `after-start-entrypoint.sh` script is found then run it - (this is a user passed in script to run actions after the app has started)
 if [ -f "/after-start-entrypoint.sh" ]; then
