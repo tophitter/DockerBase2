@@ -144,6 +144,8 @@ RUN a2enmod rewrite
 RUN a2enmod proxy
 RUN a2enmod proxy_fcgi
 RUN a2enmod proxy_http
+RUN a2enmod proxy_balancer
+RUN a2enmod lbmethod_byrequests
 RUN a2enmod status
 
 #Set docker working folder to web-root
