@@ -10,9 +10,23 @@ if [ "$ENABLE_FILEBEAT" = true ]; then
         export CONFIG_FILEBEAT_SERVICE_NAME=$HOSTNAME
     fi
 
+    if [ -n "$FILEBEAT_ENVIRONMENT" ]; then
+        export CONFIG_FILEBEAT_ENVIRONMENT=$FILEBEAT_ENVIRONMENT
+    else
+        export CONFIG_FILEBEAT_ENVIRONMENT=dev
+    fi
+
+    if [ -n "$FILEBEAT_DOMAIN_HOST" ]; then
+        export CONFIG_FILEBEAT_DOMAIN=$FILEBEAT_DOMAIN_HOST
+    else
+        export CONFIG_FILEBEAT_DOMAIN=$HOSTNAME
+    fi
+
     echo "Using the Service ID : ${CONFIG_FILEBEAT_SERVICE_NAME} for Filebeat"
 
-    
+    echo "Using the Environment : ${CONFIG_FILEBEAT_ENVIRONMENT} for Filebeat"
+
+    echo "Using the Domain Host : ${CONFIG_FILEBEAT_DOMAIN} for Filebeat"
 
     # If we have Generate cert set and the CA Cert and Key is passed generate key
     if [ "$FILEBEAT_GENERATE_CERT" = true ]; then

@@ -56,6 +56,12 @@ filebeat.inputs:
   #fields:
   #  level: debug
   #  review: 1
+  # Add custom fields to identify the domain/service
+  fields:
+    domain: "${CONFIG_FILEBEAT_DOMAIN:-}"           # e.g. example.com
+    service_name: "${CONFIG_FILEBEAT_SERVICE_NAME}"
+    environment: "${CONFIG_FILEBEAT_ENVIRONMENT:-dev}"
+  fields_under_root: true  # Set to true if you want fields at root level
 
 # ============================== Filebeat modules ==============================
 filebeat.config.modules:
