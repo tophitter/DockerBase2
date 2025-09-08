@@ -4,6 +4,7 @@
 #     https://www.atlassian.com/git/tutorials/saving-changes/gitignore
 
 .env
+*.ignore
 
 ## tests
 /tests/apache/php*/.phpunit.cache
