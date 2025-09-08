@@ -99,6 +99,9 @@ RUN useradd -m --uid 1000 --gid 50 docker
 COPY files/php/fpm/php-fpm.conf /etc/php/7.2/fpm/php-fpm.conf
 COPY files/php/fpm/pool.d/www.conf /etc/php/7.2/fpm/pool.d/www.conf
 
+# Add Empty lline at the end of the confing file if not already added else this will break the startup continer
+RUN [ -n "$(tail -c1 /etc/php/7.2/fpm/pool.d/www.conf)" ] && echo "" >> /etc/php/7.2/fpm/pool.d/www.conf || true
+
 #copy vhost file to docker
 COPY files/vhosts/000-default.conf /etc/apache2/sites-enabled/000-default.conf
 
@@ -169,6 +172,13 @@ COPY files/entrypoint.sh /
 COPY files/supervisord/supervisor-exit-event-listener /usr/bin/supervisor-exit-event-listener
 
 RUN chmod +x /entrypoint.sh /usr/bin/supervisor-exit-event-listener
+
+# Install Datadog PHP extension
+RUN curl -LO https://github.com/DataDog/dd-trace-php/releases/latest/download/datadog-setup.php
+RUN php datadog-setup.php --php-bin=all --enable-appsec --enable-profiling
+
+# Set default Datadog tracing to disabled
+ENV DD_TRACE_ENABLED=false
 
 # copy tools scripts to /opt
 COPY files/tools /opt/

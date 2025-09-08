@@ -17,15 +17,15 @@ if [ -v "PHP_UPLOAD_LIMIT" ]; then
   sh /opt/set_php_file_upload_limit.sh ${PHP_UPLOAD_LIMIT} ${PHP_UPLOAD_LIMIT_SIZE_TYPE}
 fi
 
-# # Configure Datadog settings based on DATADOG_ENABLED flag
-# if [ "${DATADOG_ENABLED}" = "true" ]; then
-#   echo "Datadog is enabled - configuring Datadog settings"
-#   sh /opt/set_datadog.sh
-# else
-#   echo "Datadog is disabled - skipping Datadog configuration"
-#   # Ensure tracing is explicitly disabled
-#   export DD_TRACE_ENABLED=false
-# fi
+# Configure Datadog settings based on DATADOG_ENABLED flag
+if [ "${DATADOG_ENABLED}" = "true" ]; then
+  echo "Datadog is enabled - configuring Datadog settings"
+  sh /opt/set_datadog.sh
+else
+  echo "Datadog is disabled - skipping Datadog configuration"
+  # Ensure tracing is explicitly disabled
+  export DD_TRACE_ENABLED=false
+fi
 
 # Set Session Handler From Launch Environment var (if SET)
 if [ -v "PHP_SESSION_SAVE_PATH" ]; then
