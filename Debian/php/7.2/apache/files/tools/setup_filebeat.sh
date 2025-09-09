@@ -227,7 +227,7 @@ EOF
     echo "✅ Filebeat SSL configuration completed successfully"
     echo "Certificate will work with hosts: $(echo $ELASTIC_LOGSTASH_HOSTS | sed 's/\[//g' | sed 's/\]//g' | sed 's/"//g')"
 
-    echo "Fielbeat configuration completed successfully"
+    echo "Filebeat configuration completed successfully"
     echo ""
     echo "================================"
     echo ""
