@@ -1,0 +1,3 @@
+# PHP 7.2 Development/Build image
+# Contains all build tools, composer, node, etc.
+php-base:{{BUILD_ID}}-p7.2-devel

@@ -1,0 +1,3 @@
+# PHP 7.4 Apache production image
+# No legacy-web tag for 7.4+
+php-base:{{BUILD_ID}}-p7.4-apache

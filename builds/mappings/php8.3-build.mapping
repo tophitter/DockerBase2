@@ -1,0 +1,3 @@
+# PHP 8.3 Development/Build image
+# Contains all build tools, composer, node, etc.
+php-base:{{BUILD_ID}}-p8.3-devel

@@ -1,0 +1,4 @@
+# PHP 7.2 Apache production image
+# Legacy web compatibility (only for 7.2)
+php-base:{{BUILD_ID}}-p7.2-apache
+legacy-web:{{BUILD_ID}}
