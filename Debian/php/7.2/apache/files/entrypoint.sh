@@ -3,6 +3,71 @@
 # Main Docker APP Entry point that is called to start all Required services and trigger on boot actions pass in by user provided data / env switch
 #
 
+# Configure RemoteIP trusted proxies dynamically
+echo "================================================"
+echo "Configuring Apache RemoteIP trusted proxies..."
+echo "================================================"
+
+# Create remoteip configuration
+cat > /etc/apache2/conf-available/remoteip-dynamic.conf << EOF
+# Auto-generated RemoteIP configuration for Docker environments
+LoadModule remoteip_module modules/mod_remoteip.so
+
+# Default private network ranges (covers most Docker/cloud environments)
+RemoteIPTrustedProxy 10.0.0.0/8
+RemoteIPTrustedProxy 172.16.0.0/12  
+RemoteIPTrustedProxy 192.168.0.0/16
+
+# Additional WSL/Docker network ranges for local development
+RemoteIPTrustedProxy 172.26.0.0/20
+EOF
+
+# Add custom trusted proxies from environment variable
+if [ ! -z "$REMOTEIP_TRUSTED_PROXIES" ]; then
+    echo "Adding custom trusted proxies from environment: $REMOTEIP_TRUSTED_PROXIES"
+    IFS=',' read -ra PROXY_LIST <<< "$REMOTEIP_TRUSTED_PROXIES"
+    for proxy in "${PROXY_LIST[@]}"; do
+        # Trim whitespace
+        proxy=$(echo "$proxy" | xargs)
+        if [ ! -z "$proxy" ]; then
+            echo "RemoteIPTrustedProxy $proxy" >> /etc/apache2/conf-available/remoteip-dynamic.conf
+            echo "  - Added custom proxy: $proxy"
+        fi
+    done
+fi
+
+# Auto-detect and add the default gateway (load balancer)
+GATEWAY_IP=$(ip route show default | awk '/default/ {print $3}')
+if [ ! -z "$GATEWAY_IP" ]; then
+    echo "RemoteIPTrustedProxy $GATEWAY_IP" >> /etc/apache2/conf-available/remoteip-dynamic.conf
+    echo "  - Added gateway IP: $GATEWAY_IP"
+fi
+
+# Auto-detect Docker bridge networks and add them
+echo "# Auto-detected Docker networks" >> /etc/apache2/conf-available/remoteip-dynamic.conf
+ip route | grep -E "docker|br-" | awk '{print $1}' | while read network; do
+    if [[ $network =~ ^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+/[0-9]+$ ]]; then
+        echo "RemoteIPTrustedProxy $network" >> /etc/apache2/conf-available/remoteip-dynamic.conf
+        echo "  - Added Docker network: $network"
+    fi
+done
+
+# Finish the configuration file
+cat >> /etc/apache2/conf-available/remoteip-dynamic.conf << EOF
+
+# Use Cloudflare's header first, then fall back to X-Forwarded-For
+RemoteIPHeader CF-Connecting-IP
+RemoteIPHeader X-Forwarded-For
+EOF
+
+# Enable the configuration
+a2enconf remoteip-dynamic
+echo "RemoteIP configuration completed and enabled"
+echo "==============================="
+echo ""
+
+
+
 # If we have an SSL CRT in the docker file then enable SSL for apache
 if [ -f /var/lib/apache/ssl/default-ssl.crt -a -f /var/lib/apache/ssl/default-ssl.key ]; then
   a2enmod ssl
