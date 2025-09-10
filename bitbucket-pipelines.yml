@@ -152,3 +152,66 @@ pipelines:
                         - mv builds/.env.ci builds/.env
                         - chmod +x builds/*.sh
                         - bash builds/run.sh --application=php --module=build --version=8.3
+        deploy_php:
+            - variables:
+                - name: PHP_VERSION
+                  description: "Select PHP version to build"
+                  default: "7.2"
+                  allowed-values:
+                    - "7.2"
+                    - "7.4" 
+                    - "8.3"
+                    - "all"
+                - name: MODULE
+                  description: "Select image type to build"
+                  default: "apache"
+                  allowed-values:
+                    - "apache"
+                    - "build"
+                    - "both"
+                - name: BUILD_ID_OVERRIDE
+                  description: "Override version (optional, leave empty for git-based)"
+                  default: ""
+                - name: ENABLE_NEW_TAGGING
+                  description: "Enable new tagging system"
+                  default: "true"
+                  allowed-values:
+                    - "true"
+                    - "false"
+            - step:
+                name: "Build PHP Images"
+                image: dvmgremp/ci-builder:docker-bookworm
+                services:
+                    - docker
+                runs-on:
+                    - ans.production
+                    - self.hosted
+                script:
+                    - mv builds/.env.ci builds/.env
+                    - chmod +x builds/*.sh
+                    
+                    # Set environment variables from pipeline variables
+                    - export BUILD_ID_OVERRIDE="${BUILD_ID_OVERRIDE}"
+                    - export ENABLE_NEW_TAGGING="${ENABLE_NEW_TAGGING}"
+                    
+                    # Build logic based on selections
+                    - |
+                      if [ "$MODULE" = "apache" ] || [ "$MODULE" = "both" ]; then
+                          if [ "$PHP_VERSION" = "all" ]; then
+                              bash builds/run.sh --application=php --module=apache --version=7.2
+                              bash builds/run.sh --application=php --module=apache --version=7.4
+                              bash builds/run.sh --application=php --module=apache --version=8.3
+                          else
+                              bash builds/run.sh --application=php --module=apache --version=${PHP_VERSION}
+                          fi
+                      fi
+                    - |
+                      if [ "$MODULE" = "build" ] || [ "$MODULE" = "both" ]; then
+                          if [ "$PHP_VERSION" = "all" ]; then
+                              bash builds/run.sh --application=php --module=build --version=7.2
+                              bash builds/run.sh --application=php --module=build --version=7.4
+                              bash builds/run.sh --application=php --module=build --version=8.3
+                          else
+                              bash builds/run.sh --application=php --module=build --version=${PHP_VERSION}
+                          fi
+                      fi
