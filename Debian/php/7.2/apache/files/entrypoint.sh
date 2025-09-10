@@ -14,6 +14,7 @@ cat > /etc/apache2/conf-available/remoteip-dynamic.conf << EOF
 LoadModule remoteip_module modules/mod_remoteip.so
 
 # Default private network ranges (covers most Docker/cloud environments)
+RemoteIPTrustedProxy 127.0.0.1/32
 RemoteIPTrustedProxy 10.0.0.0/8
 RemoteIPTrustedProxy 172.16.0.0/12  
 RemoteIPTrustedProxy 192.168.0.0/16
