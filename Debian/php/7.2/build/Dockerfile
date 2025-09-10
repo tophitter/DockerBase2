@@ -23,8 +23,8 @@ ENV NODE_VERSION=18.16.1 \
 LABEL \
     org.opencontainers.image.base.name="docker.io/library/${BASE_IMAGE}"\
     org.opencontainers.image.created=$BUILD_DATE \
-    org.opencontainers.image.title="dvmgremp/php7.2-build:bookworm" \
-    org.opencontainers.image.description="Docker Builder for PHP Scripts" \
+    org.opencontainers.image.title="${IMAGE_TITLE}" \
+    org.opencontainers.image.description="${IMAGE_DESC}" \
     org.opencontainers.image.revision=$REVISION \
     org.opencontainers.image.version=$BUILD_VERSION 
 

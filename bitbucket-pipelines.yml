@@ -5,11 +5,21 @@ definitions:
 
 pipelines:
     custom: 
-        ci_builder_docker:
-            # This one need to be useing the `atlassian/default-image:4`
-            # It will create the Build image all the other tasks in this repo will need
+        build_ci_images:
+            - variables:
+                - name: CI_APPLICATION
+                  description: "Select CI application to build"
+                  default: "docker"
+                  allowed-values:
+                    - "docker"
+                    - "ansible" 
+                    - "deploy"
+                    - "all"
+                - name: BUILD_ID_OVERRIDE
+                  description: "Override version (optional, leave empty for git-based)"
+                  default: ""
             - step:
-                name: "Build & Deploy CI Builder Image for Docker"
+                name: "Build CI Images"
                 image: atlassian/default-image:4
                 services:
                     - docker
@@ -21,55 +31,44 @@ pipelines:
                     - export DOCKER_CLI_EXPERIMENTAL=enabled
                     - mv builds/.env.ci builds/.env
                     - chmod +x builds/*.sh
-                    - export DOCKER_CLI_EXPERIMENTAL=enabled # Enable usage of buildx in Docker version < 23
-                    - export BUILDX_VERSION=0.18.0  # define what BUILDX_VERSION to download and install
-                    - curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
-                    - mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx # download buildx and move it to the docker plugin folder
-                    - docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use # setup the QEMU emulation environment
-                    - docker version
-                    - bash builds/run.sh --application=docker
-        build_all_base_images:
-            - step:
-                name: "Build & Deploy All Docker images"
-                image: dvmgremp/ci-builder:docker-bookworm
-                services:
-                    - docker
-                runs-on:
-                    - ans.production
-                    - self.hosted
-                script:
-                    - mv builds/.env.ci builds/.env
-                    - chmod +x builds/*.sh
-                    - bash builds/run.sh --application=ansible
-                    - bash builds/run.sh --application=deploy
-                    - bash builds/run.sh --application=php
-        ci_builder_ansible:
-            - step:
-                name: "Build & Deploy CI Builder for Ansible"
-                image: dvmgremp/ci-builder:docker-bookworm
-                services:
-                    - docker
-                runs-on:
-                    - ans.production
-                    - self.hosted
-                script:
-                    - mv builds/.env.ci builds/.env
-                    - chmod +x builds/*.sh
-                    - bash builds/run.sh --application=ansible
-        ci_builder_deploy:
-            - step:
-                name: "Build & Deploy CI Builder for 'Deploy' Image"
-                image: dvmgremp/ci-builder:docker-bookworm
-                services:
-                    - docker
-                runs-on:
-                    - ans.production
-                    - self.hosted
-                script:
-                    - mv builds/.env.ci builds/.env
-                    - chmod +x builds/*.sh
-                    - bash builds/run.sh --application=deploy
-        build_all_base_php_images:
+                    
+                    # Set environment variables
+                    - export BUILD_ID_OVERRIDE="${BUILD_ID_OVERRIDE}"
+                    - export ENABLE_NEW_TAGGING=false  # CI images use old naming
+                    
+                    # Install buildx for docker builds
+                    - |
+                      if [ "$CI_APPLICATION" = "docker" ] || [ "$CI_APPLICATION" = "all" ]; then
+                          export BUILDX_VERSION=0.18.0
+                          curl -fsSLO https://github.com/docker/buildx/releases/download/v${BUILDX_VERSION}/buildx-v${BUILDX_VERSION}.linux-amd64
+                          mkdir -p $HOME/.docker/cli-plugins/ && mv buildx-v${BUILDX_VERSION}.linux-amd64 $HOME/.docker/cli-plugins/docker-buildx && chmod +x ~/.docker/cli-plugins/docker-buildx
+                          docker run --rm --privileged multiarch/qemu-user-static --reset -p yes; docker buildx create --use
+                          docker version
+                      fi
+                    
+                    # Build based on selection
+                    - |
+                      case "$CI_APPLICATION" in
+                        "docker")
+                          echo "Building Docker CI image..."
+                          bash builds/run.sh --application=docker
+                          ;;
+                        "ansible")
+                          echo "Building Ansible CI image..."
+                          bash builds/run.sh --application=ansible
+                          ;;
+                        "deploy")
+                          echo "Building Deploy CI image..."
+                          bash builds/run.sh --application=deploy
+                          ;;
+                        "all")
+                          echo "Building all CI images..."
+                          bash builds/run.sh --application=docker
+                          bash builds/run.sh --application=ansible
+                          bash builds/run.sh --application=deploy
+                          ;;
+                      esac
+
             - stage:
                name: "Build & Publish PHP 7.2 Images"
                steps:
@@ -198,9 +197,7 @@ pipelines:
                     - |
                       if [ "$MODULE" = "apache" ] || [ "$MODULE" = "both" ]; then
                           if [ "$PHP_VERSION" = "all" ]; then
-                              bash builds/run.sh --application=php --module=apache --version=7.2
-                              bash builds/run.sh --application=php --module=apache --version=7.4
-                              bash builds/run.sh --application=php --module=apache --version=8.3
+                              bash builds/run.sh --application=php --module=apache
                           else
                               bash builds/run.sh --application=php --module=apache --version=${PHP_VERSION}
                           fi
@@ -208,9 +205,7 @@ pipelines:
                     - |
                       if [ "$MODULE" = "build" ] || [ "$MODULE" = "both" ]; then
                           if [ "$PHP_VERSION" = "all" ]; then
-                              bash builds/run.sh --application=php --module=build --version=7.2
-                              bash builds/run.sh --application=php --module=build --version=7.4
-                              bash builds/run.sh --application=php --module=build --version=8.3
+                              bash builds/run.sh --application=php --module=build
                           else
                               bash builds/run.sh --application=php --module=build --version=${PHP_VERSION}
                           fi

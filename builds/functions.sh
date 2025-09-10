@@ -233,20 +233,43 @@ function build_image(){
   fi
 
   if [ "${PULL_IMAGES_FROM_REGISTRY}" = true ]; then
-    CACHE_ARG="--cache-from ${IMAGE_NAME}"
-
-    #Send empty echo to make a new line in the output
-    echo "";
-
-    echo "Pull Latest version of ${IMAGE_NAME} from registry if found"
-    if docker_tag_exists $REPO $TAG; then
-        docker pull ${IMAGE_NAME} 
+    # Determine which image to use for cache
+    CACHE_IMAGE=""
+    
+    if should_disable_old_tags "$tPath" && [[ "${ENABLE_NEW_TAGGING:-true}" == "true" ]] && has_additional_mappings "$tName"; then
+        # Old tags disabled - try to cache from new image name
+        BUILD_ID=$(get_build_id)
+        NEW_TAGS=$(get_additional_tags "$tName")
+        FIRST_NEW_TAG=$(echo "$NEW_TAGS" | head -n1)
+        if [[ -n "$FIRST_NEW_TAG" ]]; then
+            CACHE_IMAGE="${CI_DOCKER_NAMESPACE}/${FIRST_NEW_TAG}"
+            echo "Old tags disabled - attempting cache from new image: ${CACHE_IMAGE}"
+        fi
     else
-        echo "";
-        echo "${IMAGE_NAME} not found in registry no cache will be used"
+        # Use old image for cache (current behavior)  
+        CACHE_IMAGE="${IMAGE_NAME}"
+        echo "Using cache from original image: ${CACHE_IMAGE}"
+    fi
+    
+    if [[ -n "$CACHE_IMAGE" ]]; then
+        CACHE_ARG="--cache-from ${CACHE_IMAGE}"
+        CACHE_REPO=$(echo "$CACHE_IMAGE" | cut -d':' -f1)
+        CACHE_TAG=$(echo "$CACHE_IMAGE" | cut -d':' -f2)
+        
+        echo "Pull Latest version of ${CACHE_IMAGE} from registry if found"
+        if docker_tag_exists "$CACHE_REPO" "$CACHE_TAG"; then
+            docker pull "${CACHE_IMAGE}"
+        else
+            echo ""
+            echo "${CACHE_IMAGE} not found in registry no cache will be used"
+            CACHE_ARG=""
+        fi
+    else
+        echo "No suitable cache image found"
+        CACHE_ARG=""
     fi
   else
-    echo "Cache Not Enabled, Skipping pulling image from registry"
+      echo "Cache Not Enabled, Skipping pulling image from registry"
   fi
 
   #Send empty echo to make a new line in the output
@@ -350,13 +373,60 @@ function build_image(){
   fi
 
   if [ "${SHOW_DOCKER_HISTORY}" = true ]; then
-    echo ""
-    echo "---------------------------------"
-    echo "Getting Docker History for ${IMAGE_NAME}"
-    echo "------"
-    docker history $IMAGE_NAME
-    echo "---------------------------------"
-    echo ""
+    # Determine which image to show history for
+    HISTORY_IMAGE=""
+    
+    if should_disable_old_tags "$tPath" && [[ "${ENABLE_NEW_TAGGING:-true}" == "true" ]] && has_additional_mappings "$tName"; then
+        # Old tags disabled - show history from first new image
+        BUILD_ID=$(get_build_id)
+        NEW_TAGS=$(get_additional_tags "$tName")
+        FIRST_NEW_TAG=$(echo "$NEW_TAGS" | head -n1)
+        if [[ -n "$FIRST_NEW_TAG" ]]; then
+            HISTORY_IMAGE="${CI_DOCKER_NAMESPACE}/${FIRST_NEW_TAG}"
+        fi
+    else
+        # Use original image (current behavior)
+        HISTORY_IMAGE="${IMAGE_NAME}"
+    fi
+    
+    if [[ -n "$HISTORY_IMAGE" ]]; then
+        echo ""
+        echo "---------------------------------"
+        echo "Getting Docker History for ${HISTORY_IMAGE}"
+        echo "------"
+        docker history "$HISTORY_IMAGE"
+        echo "---------------------------------"
+        echo ""
+    fi
+  fi
+
+  # Summary of pushed images
+  if [ "${PUSH_IMAGES_TO_REGISTRY}" = true ]; then
+      echo ""
+      echo "========================================="
+      echo "PUSHED IMAGES SUMMARY:"
+      echo "========================================="
+      
+      # Extract and display all tags that were pushed
+      echo "${ALL_TAGS}" | grep -o '\-t [^[:space:]]*' | sed 's/-t //' | while read -r tag; do
+          echo "✓ ${tag}"
+      done
+      
+      echo "========================================="
+      echo ""
+  else
+      echo ""
+      echo "========================================="
+      echo "BUILT IMAGES SUMMARY (Local Only):"
+      echo "========================================="
+      
+      # Show what was built locally
+      echo "${ALL_TAGS}" | grep -o '\-t [^[:space:]]*' | sed 's/-t //' | while read -r tag; do
+          echo "✓ ${tag}"
+      done
+      
+      echo "========================================="
+      echo ""
   fi
 }
 export -f build_image
