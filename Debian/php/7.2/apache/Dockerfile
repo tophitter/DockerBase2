@@ -6,6 +6,14 @@ LABEL maintainer="Jason Townsend"
 
 ARG WWWGROUP
 
+# Need to defined this after the from as well so it can be used in this step
+ARG BASE_IMAGE
+ARG IMAGE_TITLE
+ARG IMAGE_DESC
+ARG BUILD_DATE
+ARG REVISION
+ARG BUILD_VERSION
+
 #Define versions
 ARG MYSQL_PKG_VERSION=0.8.29-1
 
@@ -15,10 +23,6 @@ ARG SessionRedisConnectionString
 ENV DEBIAN_FRONTEND=noninteractive \
     DEBCONF_NONINTERACTIVE_SEEN=true \
     TZ=Europe/London
-
-ARG BUILD_DATE
-ARG REVISION
-ARG BUILD_VERSION
 
 # Labels
 LABEL \

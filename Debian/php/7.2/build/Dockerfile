@@ -8,7 +8,12 @@ LABEL maintainer="Jason Townsend"
 ARG BUILD_DATE
 ARG REVISION
 ARG BUILD_VERSION
+ARG IMAGE_TITLE
+ARG IMAGE_DESC
 ARG DEBIAN_FRONTEND=noninteractive
+
+# Need to defined this after the from as well so it can be used in this step
+ARG BASE_IMAGE
 
 #Environment Variables
 ENV DEBCONF_NONINTERACTIVE_SEEN true
