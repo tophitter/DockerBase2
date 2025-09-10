@@ -198,7 +198,34 @@ function build_image(){
   fi
 
   IMAGE_NAME="${REPO}:${TAG}"
-  BUILD_ARGS="${CI_BUILD_ARGS} ${COMMON_BUILD_ARGS} --build-arg BUILD_VERSION=${TAG}"
+
+  EFFECTIVE_BUILD_VERSION="${TAG}"
+  if [[ "${ENABLE_NEW_TAGGING:-true}" == "true" ]] && has_additional_mappings "$tName"; then
+      EFFECTIVE_BUILD_VERSION=$(get_build_id)
+      echo "Using BUILD_VERSION: ${EFFECTIVE_BUILD_VERSION} (from BUILD_ID)"
+  else
+      echo "Using BUILD_VERSION: ${EFFECTIVE_BUILD_VERSION} (from TAG)"
+  fi
+
+  IMAGE_TITLE="${CI_DOCKER_NAMESPACE}/${tName}"
+  IMAGE_DESC="Docker image for ${tName}"
+
+  BUILD_ARGS="${CI_BUILD_ARGS} ${COMMON_BUILD_ARGS} --build-arg BUILD_VERSION=${EFFECTIVE_BUILD_VERSION}"
+
+  # Define image metadata based on the primary image name
+  case "$tName" in
+      php*-apache)
+        PHP_VER=$(extract_php_version "$tName")
+        IMAGE_TITLE="PHP ${PHP_VER} Web Server"
+        IMAGE_DESC="Production-ready PHP ${PHP_VER} Apache environment"
+        ;;
+    php*-build)
+        PHP_VER=$(extract_php_version "$tName")
+        IMAGE_TITLE="PHP ${PHP_VER} Development Environment"
+        IMAGE_DESC="PHP ${PHP_VER} with build tools, composer, and development utilities"
+        ;;
+  esac
+  BUILD_ARGS="${BUILD_ARGS} --build-arg IMAGE_TITLE='${IMAGE_TITLE}' --build-arg IMAGE_DESC='${IMAGE_DESC}'"
 
   # if plain logging is enabled then add --progress plain as a build arg
   if [ "$USE_PLAIN_LOGS" = true ]; then
@@ -290,7 +317,6 @@ function build_image(){
   echo "";
   echo "Building with tags: ${ALL_TAGS}"
   echo "";
-
   # Build the image with all tags
   if [ "${USE_BUILDX}" = true ]; then
     if [ "${PUSH_IMAGES_TO_REGISTRY}" = true ]; then

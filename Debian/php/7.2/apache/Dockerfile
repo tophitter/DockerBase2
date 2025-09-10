@@ -1,4 +1,6 @@
-FROM debian:bookworm
+ARG BASE_IMAGE=debian:bookworm
+
+FROM ${BASE_IMAGE}
 
 LABEL maintainer="Jason Townsend"
 
@@ -13,6 +15,19 @@ ARG SessionRedisConnectionString
 ENV DEBIAN_FRONTEND=noninteractive \
     DEBCONF_NONINTERACTIVE_SEEN=true \
     TZ=Europe/London
+
+ARG BUILD_DATE
+ARG REVISION
+ARG BUILD_VERSION
+
+# Labels
+LABEL \
+    org.opencontainers.image.base.name="docker.io/library/${BASE_IMAGE}"\
+    org.opencontainers.image.title="${IMAGE_TITLE}" \
+    org.opencontainers.image.description="${IMAGE_DESC}" \
+    org.opencontainers.image.created=$BUILD_DATE \
+    org.opencontainers.image.revision=$REVISION \
+    org.opencontainers.image.version=$BUILD_VERSION 
 
 #set timezone of docker image
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
