@@ -225,7 +225,7 @@ function build_image(){
         IMAGE_DESC="PHP ${PHP_VER} with build tools, composer, and development utilities"
         ;;
   esac
-  BUILD_ARGS="${BUILD_ARGS} --build-arg IMAGE_TITLE='${IMAGE_TITLE}' --build-arg IMAGE_DESC='${IMAGE_DESC}'"
+  BUILD_ARGS="${BUILD_ARGS} --build-arg IMAGE_TITLE=${IMAGE_TITLE// /_} --build-arg IMAGE_DESC=${IMAGE_DESC// /_}"
 
   # if plain logging is enabled then add --progress plain as a build arg
   if [ "$USE_PLAIN_LOGS" = true ]; then
@@ -335,7 +335,6 @@ function build_image(){
         echo "-----------------------";
         echo "";
         docker build ${BUILD_ARGS} ${ALL_TAGS} -f ${SCRIPTPATH}/../${tPath}/Dockerfile ${SCRIPTPATH}/../${tPath} --pull ${CACHE_ARG} 
-        
         # Push all tags individually (non-buildx doesn't support --push with multiple repos)
         echo "Pushing individual tags..."
         echo "${ALL_TAGS}" | grep -o '\-t [^[:space:]]*' | sed 's/-t //' | while read -r tag; do
