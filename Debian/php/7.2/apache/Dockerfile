@@ -38,7 +38,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Install required packages in one step
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
-    lsb-release curl gnupg wget openssl git unzip cron openssh-client apt-utils less supervisor nano jq apache2 apache2-bin iproute2 \
+    lsb-release curl gnupg wget openssl git unzip cron openssh-client apt-utils less supervisor nano jq apache2 apache2-bin iproute2 lynx \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Add Ondrej's repo source and signing key along with dependencies
