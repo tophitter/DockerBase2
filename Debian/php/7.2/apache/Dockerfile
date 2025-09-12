@@ -24,6 +24,15 @@ ENV DEBIAN_FRONTEND=noninteractive \
     DEBCONF_NONINTERACTIVE_SEEN=true \
     TZ=Europe/London
 
+
+# OPcache configuration environment variables with defaults
+ENV OPCACHE_ENABLE=1 \
+    OPCACHE_MEMORY_CONSUMPTION=128 \
+    OPCACHE_INTERNED_STRINGS_BUFFER=8 \
+    OPCACHE_MAX_ACCELERATED_FILES=10000 \
+    OPCACHE_VALIDATE_TIMESTAMPS=1 \
+    OPCACHE_REVALIDATE_FREQ=2
+
 # Labels
 LABEL \
     org.opencontainers.image.base.name="docker.io/library/${BASE_IMAGE}"\
@@ -38,7 +47,7 @@ RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # Install required packages in one step
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
-    lsb-release curl gnupg wget openssl git unzip cron openssh-client apt-utils less supervisor nano jq apache2 apache2-bin iproute2 lynx \
+    lsb-release curl gnupg wget openssl git unzip cron openssh-client apt-utils less supervisor nano jq apache2 apache2-bin iproute2 lynx bc \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 # Add Ondrej's repo source and signing key along with dependencies
@@ -68,6 +77,7 @@ RUN apt-get update && apt install -y --no-install-recommends \
     php7.2-zip php7.2-bcmath php7.2-cli php7.2-memcached php7.2-imap \
     php7.2-soap php7.2-intl php7.2-readline php7.2-pcov php7.2-msgpack \
     php7.2-igbinary php7.2-redis php7.2-pdo php7.2-dom php7.2-mongodb \
+    php7.2-OPcache \
     php7.2-dev php7.2-fpm libapache2-mod-php7.2 && \
     apt clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
  
@@ -101,6 +111,28 @@ RUN update-rc.d php7.2-fpm disable
 RUN sed -i 's/variables_order = .*/variables_order = "EGPCS"/' /etc/php/7.2/apache2/php.ini
 RUN sed -i 's/variables_order = .*/variables_order = "EGPCS"/' /etc/php/7.2/cli/php.ini
 RUN sed -i 's/variables_order = .*/variables_order = "EGPCS"/' /etc/php/7.2/fpm/php.ini
+
+## Configure OPcache settings
+RUN sed -i "s/;opcache.enable=1/opcache.enable=${OPCACHE_ENABLE}/" /etc/php/7.2/apache2/php.ini && \
+    sed -i "s/;opcache.memory_consumption=128/opcache.memory_consumption=${OPCACHE_MEMORY_CONSUMPTION}/" /etc/php/7.2/apache2/php.ini && \
+    sed -i "s/;opcache.interned_strings_buffer=8/opcache.interned_strings_buffer=${OPCACHE_INTERNED_STRINGS_BUFFER}/" /etc/php/7.2/apache2/php.ini && \
+    sed -i "s/;opcache.max_accelerated_files=10000/opcache.max_accelerated_files=${OPCACHE_MAX_ACCELERATED_FILES}/" /etc/php/7.2/apache2/php.ini && \
+    sed -i "s/;opcache.validate_timestamps=1/opcache.validate_timestamps=${OPCACHE_VALIDATE_TIMESTAMPS}/" /etc/php/7.2/apache2/php.ini && \
+    sed -i "s/;opcache.revalidate_freq=2/opcache.revalidate_freq=${OPCACHE_REVALIDATE_FREQ}/" /etc/php/7.2/apache2/php.ini
+
+RUN sed -i "s/;opcache.enable=1/opcache.enable=${OPCACHE_ENABLE}/" /etc/php/7.2/fpm/php.ini && \
+    sed -i "s/;opcache.memory_consumption=128/opcache.memory_consumption=${OPCACHE_MEMORY_CONSUMPTION}/" /etc/php/7.2/fpm/php.ini && \
+    sed -i "s/;opcache.interned_strings_buffer=8/opcache.interned_strings_buffer=${OPCACHE_INTERNED_STRINGS_BUFFER}/" /etc/php/7.2/fpm/php.ini && \
+    sed -i "s/;opcache.max_accelerated_files=10000/opcache.max_accelerated_files=${OPCACHE_MAX_ACCELERATED_FILES}/" /etc/php/7.2/fpm/php.ini && \
+    sed -i "s/;opcache.validate_timestamps=1/opcache.validate_timestamps=${OPCACHE_VALIDATE_TIMESTAMPS}/" /etc/php/7.2/fpm/php.ini && \
+    sed -i "s/;opcache.revalidate_freq=2/opcache.revalidate_freq=${OPCACHE_REVALIDATE_FREQ}/" /etc/php/7.2/fpm/php.ini
+
+RUN sed -i "s/;opcache.enable=1/opcache.enable=${OPCACHE_ENABLE}/" /etc/php/7.2/cli/php.ini && \
+    sed -i "s/;opcache.memory_consumption=128/opcache.memory_consumption=${OPCACHE_MEMORY_CONSUMPTION}/" /etc/php/7.2/cli/php.ini && \
+    sed -i "s/;opcache.interned_strings_buffer=8/opcache.interned_strings_buffer=${OPCACHE_INTERNED_STRINGS_BUFFER}/" /etc/php/7.2/cli/php.ini && \
+    sed -i "s/;opcache.max_accelerated_files=10000/opcache.max_accelerated_files=${OPCACHE_MAX_ACCELERATED_FILES}/" /etc/php/7.2/cli/php.ini && \
+    sed -i "s/;opcache.validate_timestamps=1/opcache.validate_timestamps=${OPCACHE_VALIDATE_TIMESTAMPS}/" /etc/php/7.2/cli/php.ini && \
+    sed -i "s/;opcache.revalidate_freq=2/opcache.revalidate_freq=${OPCACHE_REVALIDATE_FREQ}/" /etc/php/7.2/cli/php.ini
 
 # Install composer
 #global install of composer if you use php <= 7.2 then use composer version 2.2 else use latest 
@@ -151,6 +183,11 @@ RUN mkdir -p  /var/www/html
 RUN chown docker /var/www/html
 COPY --chown=docker:staff . /var/www/html
 
+#Copy site files to web-root folder
+# RUN mkdir -p  /var/www/system
+# RUN chown docker /var/www/system
+# COPY --chown=docker:staff files/system-www /var/www/system
+
 # Setup Logs and Redirect to docker container stdout
 RUN mkdir -p  /var/www/logs
 RUN touch /var/www/logs/php_error.log
@@ -169,6 +206,9 @@ RUN a2enmod proxy_http
 RUN a2enmod proxy_balancer
 RUN a2enmod lbmethod_byrequests
 RUN a2enmod status
+RUN a2enmod deflate
+RUN a2enmod expires
+RUN a2enmod cache
 
 #Set docker working folder to web-root
 WORKDIR /var/www/html
