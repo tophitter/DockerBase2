@@ -110,6 +110,12 @@ else
     fi
 fi
 
+# Set dynamic PHP-FPM pool settings if enabled
+if [ "${DYNAMIC_POOL:-false}" = "true" ]; then
+  echo "Setting dynamic PHP-FPM pool settings..."
+  sh /opt/set_dynamic_fpm_pool.sh
+fi
+
 # If the app-entrypoint exists then run it (this is a user passed in action to be run before the app is started)
 if [ -f "/app-entrypoint.sh" ]; then
   sh /app-entrypoint.sh
