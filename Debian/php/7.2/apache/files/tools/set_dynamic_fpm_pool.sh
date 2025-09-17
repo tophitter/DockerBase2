@@ -111,26 +111,46 @@ calculate_fpm_settings() {
         return
     fi
     
-    # Calculate optimal max_children
-    local optimal_max_children=$((available_for_fpm / avg_process_memory))
-    
-    # Calculate CPU-based limit - allow more workers for memory-heavy configurations
-    # For servers with more memory than CPU cores, use a higher multiplier
+    # Calculate and display all methods
+    log_info "PHP-FPM Pool Size Calculations:"
+    log_info "Memory allocation analysis:"
+    log_info "  System overhead: ${system_overhead}MB"
+    log_info "  Apache: ${apache_overhead}MB"
+    log_info "  Supervisor: ${supervisor_overhead}MB"
+    log_info "  Other services: ${other_services}MB"
+    log_info "  Total overhead: ${total_overhead}MB"
+    log_info "  Available for PHP-FPM: ${available_for_fpm}MB"
+
+    # Calculate memory-based limit
+    local memory_based_children=$((available_for_fpm / avg_process_memory))
+    log_info "Memory-based calculation: ${memory_based_children} workers (${available_for_fpm}MB ÷ ${avg_process_memory}MB per process)"
+
+    # Calculate CPU-based limit
     local cpu_multiplier=6
     if [ "$memory_limit_mb" -gt $((cpu_cores * 1024)) ]; then
-        # If memory (in MB) > CPU cores * 1GB, increase the multiplier
         cpu_multiplier=12
     fi
     local cpu_based_limit=$((cpu_cores * cpu_multiplier))
-    
-    # Apply CPU-based limit, but only if it's not too restrictive
-    if [ "$optimal_max_children" -gt "$cpu_based_limit" ] && [ "$optimal_max_children" -gt $((cpu_based_limit * 2)) ]; then
-        # If memory-based calculation is more than double the CPU-based limit,
-        # use a value between the two to balance CPU and memory considerations
-        optimal_max_children=$(( (optimal_max_children + cpu_based_limit) / 2 ))
-        log_warn "Using increased PHP-FPM workers - monitor CPU usage"
-    elif [ "$optimal_max_children" -gt "$cpu_based_limit" ]; then
+    log_info "CPU-based calculation: ${cpu_based_limit} workers (${cpu_cores} cores × ${cpu_multiplier})"
+
+    # Calculate balanced approach if needed
+    local balanced_value=""
+    local optimal_max_children
+    if [ "$memory_based_children" -gt "$cpu_based_limit" ] && [ "$memory_based_children" -gt $((cpu_based_limit * 2)) ]; then
+        balanced_value=$(( (memory_based_children + cpu_based_limit) / 2 ))
+        log_info "Balanced calculation: ${balanced_value} workers (average of memory and CPU limits)"
+    fi
+
+    # Determine which value to use and mark it
+    if [ -n "$balanced_value" ]; then
+        optimal_max_children=$balanced_value
+        log_info "► RECOMMENDED: Balanced value (${optimal_max_children}) - prevents CPU contention while utilizing memory"
+    elif [ "$memory_based_children" -gt "$cpu_based_limit" ]; then
         optimal_max_children=$cpu_based_limit
+        log_info "► RECOMMENDED: CPU-based value (${optimal_max_children}) - prevents CPU contention"
+    else
+        optimal_max_children=$memory_based_children
+        log_info "► RECOMMENDED: Memory-based value (${optimal_max_children}) - maximizes memory usage"
     fi
     
     # Calculate other settings
@@ -228,7 +248,9 @@ main() {
     settings=$(calculate_fpm_settings "$memory_limit_mb" "$cpu_cores" "$avg_process_memory")
     
     read -r max_children start_servers min_spare max_spare <<< "$settings"
-    log_info "Calculated optimal settings:"
+    
+    # Note: The detailed calculation methods are displayed by the calculate_fpm_settings function
+    log_info "Final PHP-FPM settings to be applied:"
     log_info "  pm.max_children = $max_children"
     log_info "  pm.start_servers = $start_servers"
     log_info "  pm.min_spare_servers = $min_spare"
