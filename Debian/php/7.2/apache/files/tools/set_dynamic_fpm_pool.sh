@@ -114,9 +114,22 @@ calculate_fpm_settings() {
     # Calculate optimal max_children
     local optimal_max_children=$((available_for_fpm / avg_process_memory))
     
-    # Adjust based on CPU cores to prevent CPU oversubscription
-    local cpu_based_limit=$((cpu_cores * 6))
-    if [ "$optimal_max_children" -gt "$cpu_based_limit" ]; then
+    # Calculate CPU-based limit - allow more workers for memory-heavy configurations
+    # For servers with more memory than CPU cores, use a higher multiplier
+    local cpu_multiplier=6
+    if [ "$memory_limit_mb" -gt $((cpu_cores * 1024)) ]; then
+        # If memory (in MB) > CPU cores * 1GB, increase the multiplier
+        cpu_multiplier=12
+    fi
+    local cpu_based_limit=$((cpu_cores * cpu_multiplier))
+    
+    # Apply CPU-based limit, but only if it's not too restrictive
+    if [ "$optimal_max_children" -gt "$cpu_based_limit" ] && [ "$optimal_max_children" -gt $((cpu_based_limit * 2)) ]; then
+        # If memory-based calculation is more than double the CPU-based limit,
+        # use a value between the two to balance CPU and memory considerations
+        optimal_max_children=$(( (optimal_max_children + cpu_based_limit) / 2 ))
+        log_warn "Using increased PHP-FPM workers - monitor CPU usage"
+    elif [ "$optimal_max_children" -gt "$cpu_based_limit" ]; then
         optimal_max_children=$cpu_based_limit
     fi
     
