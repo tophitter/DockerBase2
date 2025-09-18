@@ -6,6 +6,40 @@
 
 set -e
 
+#############################################
+# CONFIGURABLE PARAMETERS
+#############################################
+
+# Resource allocation (in MB)
+SYSTEM_OVERHEAD=100       # Base system processes overhead
+APACHE_OVERHEAD=150       # Apache processes memory usage
+SUPERVISOR_OVERHEAD=20    # Supervisor process memory usage
+OTHER_SERVICES=50         # Other services memory usage
+MIN_MEMORY_THRESHOLD=100  # Minimum memory required for PHP-FPM to function
+
+# PHP-FPM process settings
+DEFAULT_PROCESS_MEMORY=25 # Default memory per PHP-FPM process in MB if can't be detected
+
+# CPU allocation factors
+CPU_MULTIPLIER_STANDARD=6  # Standard multiplier for CPU-based worker calculation
+CPU_MULTIPLIER_HIGH_MEM=12 # Higher multiplier for memory-rich systems
+MEMORY_CPU_RATIO=1024      # Memory (MB) per CPU core threshold for high memory systems
+
+# Worker calculation factors
+START_SERVERS_FACTOR=4     # Divisor for calculating pm.start_servers
+MIN_SPARE_FACTOR=6         # Divisor for calculating pm.min_spare_servers
+MAX_SPARE_FACTOR=3         # Divisor for calculating pm.max_spare_servers
+
+# PHP-FPM configuration file path
+PHP_FPM_CONFIG="/etc/php/7.2/fpm/pool.d/www.conf"
+
+# PHP-FPM service name for supervisor
+PHP_FPM_SERVICE="php-fpm7.2"
+
+#############################################
+# END OF CONFIGURABLE PARAMETERS
+#############################################
+
 # Colors for output
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -93,18 +127,12 @@ detect_cpu_cores() {
 calculate_fpm_settings() {
     local memory_limit_mb=$1
     local cpu_cores=$2
-    local avg_process_memory=${3:-25} # Default to 25MB if not provided
+    local avg_process_memory=${3:-$DEFAULT_PROCESS_MEMORY} # Use the default value from parameters
     
-    # Define system overhead
-    local system_overhead=100
-    local apache_overhead=150
-    local supervisor_overhead=20
-    local other_services=50
-    
-    local total_overhead=$((system_overhead + apache_overhead + supervisor_overhead + other_services))
+    local total_overhead=$((SYSTEM_OVERHEAD + APACHE_OVERHEAD + SUPERVISOR_OVERHEAD + OTHER_SERVICES))
     local available_for_fpm=$((memory_limit_mb - total_overhead))
     
-    if [ "$available_for_fpm" -lt 100 ]; then
+    if [ "$available_for_fpm" -lt "$MIN_MEMORY_THRESHOLD" ]; then
         log_error "Insufficient memory for PHP-FPM (${available_for_fpm}MB available)"
         # Use minimal settings
         echo "5 1 1 3"
@@ -114,10 +142,10 @@ calculate_fpm_settings() {
     # Calculate and display all methods
     log_info "PHP-FPM Pool Size Calculations:"
     log_info "Memory allocation analysis:"
-    log_info "  System overhead: ${system_overhead}MB"
-    log_info "  Apache: ${apache_overhead}MB"
-    log_info "  Supervisor: ${supervisor_overhead}MB"
-    log_info "  Other services: ${other_services}MB"
+    log_info "  System overhead: ${SYSTEM_OVERHEAD}MB"
+    log_info "  Apache: ${APACHE_OVERHEAD}MB"
+    log_info "  Supervisor: ${SUPERVISOR_OVERHEAD}MB"
+    log_info "  Other services: ${OTHER_SERVICES}MB"
     log_info "  Total overhead: ${total_overhead}MB"
     log_info "  Available for PHP-FPM: ${available_for_fpm}MB"
 
@@ -126,9 +154,9 @@ calculate_fpm_settings() {
     log_info "Memory-based calculation: ${memory_based_children} workers (${available_for_fpm}MB ÷ ${avg_process_memory}MB per process)"
 
     # Calculate CPU-based limit
-    local cpu_multiplier=6
-    if [ "$memory_limit_mb" -gt $((cpu_cores * 1024)) ]; then
-        cpu_multiplier=12
+    local cpu_multiplier=$CPU_MULTIPLIER_STANDARD
+    if [ "$memory_limit_mb" -gt $((cpu_cores * MEMORY_CPU_RATIO)) ]; then
+        cpu_multiplier=$CPU_MULTIPLIER_HIGH_MEM
     fi
     local cpu_based_limit=$((cpu_cores * cpu_multiplier))
     log_info "CPU-based calculation: ${cpu_based_limit} workers (${cpu_cores} cores × ${cpu_multiplier})"
@@ -154,9 +182,9 @@ calculate_fpm_settings() {
     fi
     
     # Calculate other settings
-    local optimal_start_servers=$((optimal_max_children / 4))
-    local optimal_min_spare=$((optimal_max_children / 6))
-    local optimal_max_spare=$((optimal_max_children / 3))
+    local optimal_start_servers=$((optimal_max_children / START_SERVERS_FACTOR))
+    local optimal_min_spare=$((optimal_max_children / MIN_SPARE_FACTOR))
+    local optimal_max_spare=$((optimal_max_children / MAX_SPARE_FACTOR))
     
     # Ensure minimum values
     if [ "$optimal_start_servers" -lt 1 ]; then optimal_start_servers=1; fi
@@ -204,8 +232,8 @@ main() {
     cpu_cores=$(detect_cpu_cores)
     log_info "Detected CPU cores: $cpu_cores"
     
-    # PHP-FPM configuration file for PHP 7.2 in Debian
-    local config_file="/etc/php/7.2/fpm/pool.d/www.conf"
+    # PHP-FPM configuration file
+    local config_file="$PHP_FPM_CONFIG"
     
     if [ ! -f "$config_file" ]; then
         log_error "PHP-FPM configuration file not found: $config_file"
@@ -215,7 +243,7 @@ main() {
     log_info "Using PHP-FPM configuration file: $config_file"
     
     # Determine average PHP-FPM process memory
-    local avg_process_memory=25  # Default value
+    local avg_process_memory=$DEFAULT_PROCESS_MEMORY  # Use default value from parameters
     
     # Try to get actual average from running processes
     local fpm_processes
@@ -262,7 +290,7 @@ main() {
     # Restart PHP-FPM using supervisorctl
     log_info "Restarting PHP-FPM using supervisorctl..."
     if command -v supervisorctl >/dev/null 2>&1; then
-        supervisorctl restart php-fpm7.2 || true
+        supervisorctl restart "$PHP_FPM_SERVICE" || true
         log_success "PHP-FPM restarted successfully"
     else
         log_warn "supervisorctl not found, PHP-FPM will need to be restarted manually"
