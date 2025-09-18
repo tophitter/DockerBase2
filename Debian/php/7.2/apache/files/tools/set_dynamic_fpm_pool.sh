@@ -46,6 +46,12 @@ YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m' # No Color
 
+# Global variables for PHP-FPM settings
+FPM_MAX_CHILDREN=0
+FPM_START_SERVERS=0
+FPM_MIN_SPARE=0
+FPM_MAX_SPARE=0
+
 # Logging functions
 log_info() {
     echo -e "[INFO] $1"
@@ -135,7 +141,10 @@ calculate_fpm_settings() {
     if [ "$available_for_fpm" -lt "$MIN_MEMORY_THRESHOLD" ]; then
         log_error "Insufficient memory for PHP-FPM (${available_for_fpm}MB available)"
         # Use minimal settings
-        echo "5 1 1 3"
+        FPM_MAX_CHILDREN=5
+        FPM_START_SERVERS=1
+        FPM_MIN_SPARE=1
+        FPM_MAX_SPARE=3
         return
     fi
     
@@ -191,8 +200,11 @@ calculate_fpm_settings() {
     if [ "$optimal_min_spare" -lt 1 ]; then optimal_min_spare=1; fi
     if [ "$optimal_max_spare" -lt 2 ]; then optimal_max_spare=2; fi
     
-    # Return the calculated values
-    echo "$optimal_max_children $optimal_start_servers $optimal_min_spare $optimal_max_spare"
+    # Set global variables instead of returning values
+    FPM_MAX_CHILDREN=$optimal_max_children
+    FPM_START_SERVERS=$optimal_start_servers
+    FPM_MIN_SPARE=$optimal_min_spare
+    FPM_MAX_SPARE=$optimal_max_spare
 }
 
 # Update PHP-FPM pool configuration
@@ -257,13 +269,13 @@ main() {
             local proc_memory
             proc_memory=$(ps -o rss= -p "$pid" 2>/dev/null | awk '{print $1/1024}' || echo "0")
             if [ "$proc_memory" != "0" ]; then
-                total_memory=$(echo "$total_memory + $proc_memory" | bc)
+                total_memory=$(awk "BEGIN {print $total_memory + $proc_memory}")
                 process_count=$((process_count + 1))
             fi
         done
         
         if [ "$process_count" -gt 0 ]; then
-            avg_process_memory=$(echo "scale=0; $total_memory / $process_count" | bc)
+            avg_process_memory=$(awk "BEGIN {printf \"%.0f\", $total_memory / $process_count}")
             log_info "Detected average PHP-FPM process memory: ${avg_process_memory}MB"
         fi
     else
@@ -272,20 +284,17 @@ main() {
     
     # Calculate optimal settings
     log_info "Calculating optimal PHP-FPM settings..."
-    local settings
-    settings=$(calculate_fpm_settings "$memory_limit_mb" "$cpu_cores" "$avg_process_memory")
-    
-    read -r max_children start_servers min_spare max_spare <<< "$settings"
+    calculate_fpm_settings "$memory_limit_mb" "$cpu_cores" "$avg_process_memory"
     
     # Note: The detailed calculation methods are displayed by the calculate_fpm_settings function
     log_info "Final PHP-FPM settings to be applied:"
-    log_info "  pm.max_children = $max_children"
-    log_info "  pm.start_servers = $start_servers"
-    log_info "  pm.min_spare_servers = $min_spare"
-    log_info "  pm.max_spare_servers = $max_spare"
+    log_info "  pm.max_children = $FPM_MAX_CHILDREN"
+    log_info "  pm.start_servers = $FPM_START_SERVERS"
+    log_info "  pm.min_spare_servers = $FPM_MIN_SPARE"
+    log_info "  pm.max_spare_servers = $FPM_MAX_SPARE"
     
     # Update pool configuration
-    update_pool_config "$config_file" "$max_children" "$start_servers" "$min_spare" "$max_spare"
+    update_pool_config "$config_file" "$FPM_MAX_CHILDREN" "$FPM_START_SERVERS" "$FPM_MIN_SPARE" "$FPM_MAX_SPARE"
     
     # Restart PHP-FPM using supervisorctl
     log_info "Restarting PHP-FPM using supervisorctl..."
