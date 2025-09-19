@@ -1,19 +1,34 @@
 #!/usr/bin/env python3
-# A supervisor event listener which terminates supervisord if any of its child
+# A supervisor event listener which terminates supervisord only if critical
 # processes enter the FATAL state.
-# https://stackoverflow.com/a/37527488/119527
 import os
 import signal
+import sys
 
 from supervisor import childutils
+
+# Define critical services that should cause container exit when they fail
+CRITICAL_SERVICES = ['apache', 'php-fpm8.3']
 
 def main():
     while True:
         headers, payload = childutils.listener.wait()
         childutils.listener.ok()
+        
         if headers['eventname'] != 'PROCESS_STATE_FATAL':
             continue
-        os.kill(os.getppid(), signal.SIGTERM)
+            
+        # Extract the process name from the payload
+        # Payload format: processname:NAME groupname:NAME from_state:STATE
+        payload_dict = dict([x.split(':') for x in payload.split(' ')])
+        process_name = payload_dict.get('processname')
+        
+        # Only exit if a critical service has failed
+        if process_name in CRITICAL_SERVICES:
+            sys.stderr.write(f"Critical service {process_name} failed, terminating container\n")
+            os.kill(os.getppid(), signal.SIGTERM)
+        else:
+            sys.stderr.write(f"Non-critical service {process_name} failed, container will continue running\n")
 
 if __name__ == "__main__":
     main()
